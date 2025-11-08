@@ -1,0 +1,68 @@
+[
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/cpp_example.cpp.o -c /home/legion/codespace_test/cpp_example.cpp",
+  "file": "/home/legion/codespace_test/cpp_example.cpp",
+  "output": "CMakeFiles/wfoptim.dir/cpp_example.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Turbine.cpp.o -c /home/legion/codespace_test/Turbine.cpp",
+  "file": "/home/legion/codespace_test/Turbine.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Turbine.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Turbulence.cpp.o -c /home/legion/codespace_test/Turbulence.cpp",
+  "file": "/home/legion/codespace_test/Turbulence.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Turbulence.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/combination.cpp.o -c /home/legion/codespace_test/combination.cpp",
+  "file": "/home/legion/codespace_test/combination.cpp",
+  "output": "CMakeFiles/wfoptim.dir/combination.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Deflection.cpp.o -c /home/legion/codespace_test/Deflection.cpp",
+  "file": "/home/legion/codespace_test/Deflection.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Deflection.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Farm.cpp.o -c /home/legion/codespace_test/Farm.cpp",
+  "file": "/home/legion/codespace_test/Farm.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Farm.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/MyNLP.cpp.o -c /home/legion/codespace_test/MyNLP.cpp",
+  "file": "/home/legion/codespace_test/MyNLP.cpp",
+  "output": "CMakeFiles/wfoptim.dir/MyNLP.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Rotation.cpp.o -c /home/legion/codespace_test/Rotation.cpp",
+  "file": "/home/legion/codespace_test/Rotation.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Rotation.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Velocity.cpp.o -c /home/legion/codespace_test/Velocity.cpp",
+  "file": "/home/legion/codespace_test/Velocity.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Velocity.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/Toolset.cpp.o -c /home/legion/codespace_test/Toolset.cpp",
+  "file": "/home/legion/codespace_test/Toolset.cpp",
+  "output": "CMakeFiles/wfoptim.dir/Toolset.cpp.o"
+},
+{
+  "directory": "/home/legion/codespace_test/build",
+  "command": "/usr/bin/g++ -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include -g -std=gnu++14 -fopenmp -o CMakeFiles/wfoptim.dir/wrappedfunc.cpp.o -c /home/legion/codespace_test/wrappedfunc.cpp",
+  "file": "/home/legion/codespace_test/wrappedfunc.cpp",
+  "output": "CMakeFiles/wfoptim.dir/wrappedfunc.cpp.o"
+}
+]
