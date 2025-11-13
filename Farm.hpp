@@ -1,16 +1,21 @@
 #ifndef FARM_HPP
 #define FARM_HPP
-
-#include "Toolset.hpp"
+#include <string>
+#include <vector>
+#include <random>
+#include <fstream>
+#include <iostream>
+#include "Turbine.hpp"
+// #include "Toolset.hpp"
 /*注意：除输入/最终输出与特殊情况下（非数值类数组）时使用vector,其余一律使用Eigen库*/
 
-typedef std::vector<std::tuple<Eigen::MatrixXd, Turbine, int>> TURB_CELLARR;
+typedef std::vector<std::tuple<Eigen::MatrixXd, Turbine, int>> TURB_CELLARR; // 风场所有风机布局
 constexpr std::size_t MaxTurbines = 159; //必须与输入风机数量一致
 
 struct Turbine_cell {
-    Eigen::MatrixXd layout;
-    std::vector<Turbine> turbine_chart;
-    std::array<int, MaxTurbines> idx;
+    Eigen::MatrixXd layout; // 布局
+    std::vector<Turbine> turbine_chart; // 风机数组
+    std::array<int, MaxTurbines> idx; // 编号
 };
 
 //// 结果结构体：包含所有需要返回的 rotated 信息
@@ -43,33 +48,33 @@ struct RotatedResult {
     // 偏转模型 y_model: 每台风机3组多项式输出
     std::vector<std::vector<Eigen::VectorXd>> y_model;
 
-    // mask: (P, N) 逻辑掩码（0/1）
+    // mask: 1表示命中，0表示未命中
     std::vector<std::vector<int>> idx_mask;
 };
 
 class WindFarmOptimization {
 public:
     // 风资源参数
-    double wind_speed;
-    double wind_direction;
-    double turbulence_intensity;
-    double added_turbulence_intensity = 0.0;
-    double wind_shear;
-    double wind_veer;
-    int n_turbines;
-    std::array<int, MaxTurbines> idx_org;
+    double wind_speed; // 风速
+    double wind_direction; // 风向（度）
+    double turbulence_intensity; // 湍流强度
+    double added_turbulence_intensity = 0.0; // 额外湍流强度
+    double wind_shear; // 风切变
+    double wind_veer; // 风偏转
+    int n_turbines; // 风机数量
+    std::array<int, MaxTurbines> idx_org; // 原始风机编号顺序
 
     // 风场布局(originally included in turbinechart class)
     Eigen::MatrixXd layout; // 每行一个风机的[x, y, z]
-    std::vector<Turbine> turbine_chart;
+    std::vector<Turbine> turbine_chart; // 风机数组
     TURB_CELLARR turbine_tuple;
 
     // 优化相关参数
-    double yaw_lower = -30.0;
-    double yaw_upper = 30.0;
+    double yaw_lower = -30.0; // 偏航角下限
+    double yaw_upper = 30.0;  // 偏航角上限
     // 风机数量(92+67=159)
-    std::vector<int> qz_12;
-    std::vector<int> qz_3;
+    std::vector<int> qz_12; // 青州12风机编号
+    std::vector<int> qz_3;  // 青州3风机编号
 
     // 风场网格相关
     Eigen::VectorXd u; // 风速场
@@ -79,20 +84,20 @@ public:
 
     // 构造函数
     WindFarmOptimization(
-        const std::vector<std::vector<double>>& PT,
-        const std::array<std::vector<int>, 3>& t_qz,
-        const std::vector<double>& turbulence_sheer_veer,
-        const std::vector<double>& turbine_diameter_vector,
-        const std::vector<double>& turbine_hub_height_vector,
-        const std::vector<double>& rated_power_vector,
-        const std::vector<double>& life_total_vector,
-        const std::vector<double>& repair_c_vector,
-        const std::vector<double>& yaw_vec,
-        const std::vector<double>& fatigue,
-        const std::vector<double>& fatigue_p,
-        const std::vector<std::vector<double>>& layout_farm,
-        double wind_speed,
-        double wind_direction
+        const std::vector<std::vector<double>>& PT, // 功率推力查表
+        const std::array<std::vector<int>, 3>& t_qz, // 青州123风机编号
+        const std::vector<double>& turbulence_sheer_veer, // 湍流切变偏转
+        const std::vector<double>& turbine_diameter_vector, // 风机直径
+        const std::vector<double>& turbine_hub_height_vector, // 风机轮毂高度
+        const std::vector<double>& rated_power_vector, // 风机额定功率
+        const std::vector<double>& life_total_vector, // 风机寿命
+        const std::vector<double>& repair_c_vector, // 维修成本
+        const std::vector<double>& yaw_vec, // 偏航角向量
+        const std::vector<double>& fatigue, // 疲劳
+        const std::vector<double>& fatigue_p, // 疲劳参数
+        const std::vector<std::vector<double>>& layout_farm, // 风场布局
+        double wind_speed, // 风速
+        double wind_direction // 风向
         );
 
     // 析构函数
@@ -131,25 +136,8 @@ public:
     // 获取青州3风场功率
     double getFarmQingzhou3Power() const;
 
-    // 获取场群各风机寿命
-
-	// 获取场群所有风机平均寿命
-
-    // 获取场群各风机优化指标
-
-    // 获取场群总指标
-
-    // 优化主入口（示例：功率优化）
-    //Eigen::VectorXd optimizeYawAngles();
-    
-    // grad_f calculation for optimizer
-    double grad_f_yaw_i(int idx);
-	double grad_f_gamma_k_analytic(int kIdx);
-	Eigen::VectorXd grad_f(const std::vector<double>& yaw_angles);
-
-	// grad_g calculation for optimizer
-    Eigen::VectorXd grad_g_yaw_i(int idx);
-	Eigen::MatrixXd grad_g(const std::vector<double>& yaw_angles);
+    // 风场效能函数
+    double farmEfficiencyFunction() const; // to be implemented
 
     // 计算尾流影响
     void calculateWake();
@@ -164,17 +152,74 @@ private:
 
 	Turbine_cell rotated_turbine(Eigen::VectorXd& center, double angle); // turbine layout rotation
 
-    // rotated相关预计算
+    // 预计算部分
     RotatedResult compute_rotated();
 
-    // prepare static cache
+    // 准备安装缓存
     RotatedResult prepareStaticCache();
 
 };
 
-Turbine_cell sortInX(const Turbine_cell& turbine_arr);
-Eigen::VectorXd polyval(const Eigen::VectorXd& x, const Eigen::VectorXd& coeffs);
-// Calculate overlap between undisturbed and disturbed velocities
+Turbine_cell sortInX(const Turbine_cell& turbine_arr); // 按x坐标排序
+Eigen::VectorXd polyval(const Eigen::VectorXd& x, const Eigen::VectorXd& coeffs); // 多项式求值
+// 计算风机尾流重叠面积比例
 double calculate_overlap(const Eigen::VectorXd& undisturbed_velocity, const Eigen::VectorXd& disturbed_velocity, const Turbine& turbine);
+
+
+// 工具函数
+
+// 生成 m 行 n 列的二维随机 double vector
+std::vector<std::vector<double>> generateRandomPT(int m, int n, double lwr, double upr);
+// 读取所有数据到二维 double vector
+std::vector<std::vector<double>> readCSV(const std::string& filename);
+std::vector<std::vector<int>> readCSVInt(const std::string& filename);
+
+// 风场风速计算
+Eigen::VectorXd velocity_function(
+    const Eigen::VectorXd& delta_u_coff,
+    double coeff,
+    const Eigen::VectorXd& sigma_square,
+    const Eigen::VectorXd& exp_term,
+    const Eigen::VectorXd & x_d,
+    const Eigen::VectorXd & y_d,
+    const Eigen::VectorXd & z_d,
+    const Turbine& turbine,
+    const Eigen::VectorXd & deflection,
+    double u_initial
+);
+
+// 风场偏转计算
+Eigen::VectorXd deflection_function(
+    const Eigen::VectorXd& x_d,
+    const Turbine& turbine,
+    const std::vector<int>& idx,
+    const std::vector<Eigen::VectorXd>& y_model
+);
+
+// 风场湍流计算
+Eigen::VectorXd turbulence_function(
+    const Eigen::VectorXd& sigma_tm,
+    const Eigen::VectorXd& R_half,
+    const Eigen::VectorXd& x_d,
+    const Eigen::VectorXd& y_d,
+    const Eigen::VectorXd& z_d,
+    const Turbine& turbine,
+    const Eigen::VectorXd& deflection,
+    const Eigen::VectorXd& turbulence_init);
+
+// 风场尾流合成
+Eigen::VectorXd combination_function(
+    const Eigen::VectorXd& u_wake,
+    const Eigen::VectorXd& u_wake_induced
+);
+
+// 风场湍流合成
+Eigen::VectorXd turbulence_combination_function(
+    const Eigen::VectorXd& turbulence_wake,
+    const Eigen::VectorXd& turbulence_wake_induced
+);
+
+// 风机布局旋转
+Eigen::MatrixXd rot_func(Eigen::MatrixXd& pos, Eigen::VectorXd& center, double angle);
 
 #endif

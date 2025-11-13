@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/include/eigen3/Eigen",
-                "/usr/local/include/coin-or"
+                "/usr/local/include/coin-or",
+                "/home/legion/code_space_mkl/mkl/mkl/latest/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

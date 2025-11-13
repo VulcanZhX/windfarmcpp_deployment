@@ -1,17 +1,527 @@
 // Initialization will only be done once, subsequent calls will skip initialization.
 
 #include "wrappedfunc.hpp"
-#include "MyNLP.hpp"
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include <IpOptionsList.hpp>
+#include <cassert>
+#include <random>
+#include "omp.h"
 
 WindFarmOptimization* g_farmopt = nullptr;
+
+// NLP DEF
+#include "IpTNLP.hpp"
+#include "Farm.hpp"
+
+using namespace Ipopt;
+
+class MyNLP : public TNLP
+{
+public:
+
+	/** default constructor */
+	MyNLP(WindFarmOptimization* farmopt_cpy);
+
+	/** default destructor */
+	virtual ~MyNLP();
+
+	/** windfarm class to be optimized*/
+	WindFarmOptimization* farmopt;
+	std::vector<double> lwrbnd;
+	/**@name Overloaded from TNLP */
+	//@{
+	/** Method to return some info about the nlp */
+	virtual bool get_nlp_info(
+		Index& n,
+		Index& m,
+		Index& nnz_jac_g,
+		Index& nnz_h_lag,
+		IndexStyleEnum& index_style
+	);
+
+	/** Method to return the bounds for my problem */
+	virtual bool get_bounds_info(
+		Index   n,
+		Number* x_l,
+		Number* x_u,
+		Index   m,
+		Number* g_l,
+		Number* g_u
+	);
+
+	/** Method to return the starting point for the algorithm */
+	virtual bool get_starting_point(
+		Index   n,
+		bool    init_x,
+		Number* x,
+		bool    init_z,
+		Number* z_L,
+		Number* z_U,
+		Index   m,
+		bool    init_lambda,
+		Number* lambda
+	);
+
+	/** Method to return the objective value */
+	virtual bool eval_f(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Number& obj_value
+	);
+
+	/** Method to return the gradient of the objective */
+	virtual bool eval_grad_f(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Number* grad_f
+	);
+
+	/** Method to return the constraint residuals */
+	virtual bool eval_g(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Index         m,
+		Number* g
+	);
+
+	/** Method to return:
+	 *   1) The structure of the Jacobian (if "values" is NULL)
+	 *   2) The values of the Jacobian (if "values" is not NULL)
+	 */
+	virtual bool eval_jac_g(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Index         m,
+		Index         nele_jac,
+		Index* iRow,
+		Index* jCol,
+		Number* values
+	);
+
+	/** Method to return:
+	 *   1) The structure of the Hessian of the Lagrangian (if "values" is NULL)
+	 *   2) The values of the Hessian of the Lagrangian (if "values" is not NULL)
+	 */
+	 //virtual bool eval_h(
+	 //   Index         n,
+	 //   const Number* x,
+	 //   bool          new_x,
+	 //   Number        obj_factor,
+	 //   Index         m,
+	 //   const Number* lambda,
+	 //   bool          new_lambda,
+	 //   Index         nele_hess,
+	 //   Index*        iRow,
+	 //   Index*        jCol,
+	 //   Number*       values
+	 //);
+
+	 /** This method is called when the algorithm is complete so the TNLP can store/write the solution */
+	virtual void finalize_solution(
+		SolverReturn status,
+		Index n,
+		const Number *x,
+		const Number *z_L,
+		const Number *z_U,
+		Index m,
+		const Number *g,
+		const Number *lambda,
+		Number obj_value,
+		const IpoptData *ip_data, IpoptCalculatedQuantities *ip_cq
+	);
+	//@}
+
+private:
+	/**@name Methods to block default compiler methods.
+	 *
+	 * The compiler automatically generates the following three methods.
+	 *  Since the default compiler implementation is generally not what
+	 *  you want (for all but the most simple classes), we usually
+	 *  put the declarations of these methods in the private section
+	 *  and never implement them. This prevents the compiler from
+	 *  implementing an incorrect "default" behavior without us
+	 *  knowing. (See Scott Meyers book, "Effective C++")
+	 */
+	 //@{
+	MyNLP(
+		const MyNLP&
+	);
+
+	MyNLP& operator=(
+		const MyNLP&
+		);
+	//@}
+
+	double objPower(const Number *x); // FarmPwr(yaw_angle)
+	Eigen::VectorXd gval(const Number *x, std::vector<double> &lwrbnd); // constraint values
+	double grad_f_i(const Number* x, int idx);
+	Eigen::VectorXd grad_f_all(const Number* x, int n);
+	Eigen::VectorXd grad_g_i(const Number* x, int idx);
+	Eigen::MatrixXd grad_g_all(const Number* x, int n);
+};
+
+
+
+// Impl
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
+/* Constructor. */
+MyNLP::MyNLP(WindFarmOptimization* farmopt_cpy)
+	: farmopt(farmopt_cpy)
+{
+	farmopt->calculateWake();
+    lwrbnd = { 0., 0. };
+	// No additional initialization required
+}
+
+MyNLP::~MyNLP() = default;
+
+bool MyNLP::get_nlp_info(
+   Index&          n,
+   Index&          m,
+   Index&          nnz_jac_g,
+   Index&          nnz_h_lag,
+   IndexStyleEnum& index_style
+)
+{
+   // The problem described in MyNLP.hpp has n variables
+   n = MaxTurbines;
+
+   // m equality constraint,
+   m = 2;
+
+   // nonzeros in the jacobian
+   nnz_jac_g = m * n; // for simplicity, the jacobian matrix is assumed to be dense
+
+   //// and 2 nonzeros in the hessian of the lagrangian
+   //// (one in the hessian of the objective for x2,
+   ////  and one in the hessian of the constraints for x1)
+
+   // We use the standard fortran index style for row/col entries
+   index_style = C_STYLE;
+
+   return true;
+}
+
+bool MyNLP::get_bounds_info(
+   Index   n,
+   Number* x_l,
+   Number* x_u,
+   Index   m,
+   Number* g_l,
+   Number* g_u
+)
+{
+   // here, the n and m we gave IPOPT in get_nlp_info are passed back to us.
+   // If desired, we could assert to make sure they are what we think they are.
+   assert(n == MaxTurbines);
+   assert(m == 2);
+
+   // lower bound and upper bound on x
+   for (Index i = 0; i < n; i++) {
+	   x_l[i] = farmopt->yaw_lower; // x lower bound
+	   x_u[i] = farmopt->yaw_upper; // x upper bound
+   }
+
+   // we have two inequality constraints. the lower bounds are zero
+   g_l[0] = 0.0;
+   g_l[1] = 0.0;
+   g_u[0] = 1.0e19;
+   g_u[1] = 1.0e19;
+
+   return true;
+}
+
+bool MyNLP::get_starting_point(
+   Index   n,
+   bool    init_x,
+   Number* x,
+   bool    init_z,
+   Number* z_L,
+   Number* z_U,
+   Index   m,
+   bool    init_lambda,
+   Number* lambda
+)
+{
+   // Here, we assume we only have starting values for x, if you code
+   // your own NLP, you can provide starting values for the others if
+   // you wish.
+   assert(init_x == true);
+   assert(init_z == false);
+   assert(init_lambda == false);
+
+   // we initialize x in bounds, in the upper right quadrant
+   Eigen::VectorXd yaw_vec = farmopt->getYawAngles();
+   for (Index i = 0; i < n; i++) {
+       x[i] = yaw_vec(i);
+   }
+
+   return true;
+}
+
+bool MyNLP::eval_f(
+   Index         n,
+   const Number* x,
+   bool          new_x,
+   Number&       obj_value
+)
+{
+   // return the value of the objective function
+	obj_value = objPower(const_cast<Number*>(x));
+
+   return true;
+}
+
+bool MyNLP::eval_grad_f(
+   Index         n,
+   const Number* x,
+   bool          new_x,
+   Number*       grad_f
+)
+{
+   // return the gradient of the objective function grad_{x} f(x)
+    Eigen::VectorXd grad_f_vec = grad_f_all(x, n);
+    for (Index i = 0; i < n; i++) {
+        grad_f[i] = grad_f_vec(i);
+	}
+
+   return true;
+}
+
+bool MyNLP::eval_g(
+   Index         n,
+   const Number* x,
+   bool          new_x,
+   Index         m,
+   Number*       g
+)
+{
+   // return the value of the constraints: g(x)
+   //Number x1 = x[0];
+   //Number x2 = x[1];
+
+   //g[0] = -(x1 * x1 + x2 - 1.0);
+   Eigen::VectorXd g_vec = gval(x, lwrbnd);
+   for (Index i = 0; i < m; i++) {
+       g[i] = g_vec(i);
+   }
+
+   return true;
+}
+
+bool MyNLP::eval_jac_g(
+   Index         n,
+   const Number* x,
+   bool          new_x,
+   Index         m,
+   Index         nele_jac,
+   Index*        iRow,
+   Index*        jCol,
+   Number*       values
+)
+{
+	std::vector<double> x_vec(MaxTurbines); // to be fixed
+   if( values == nullptr )
+   {
+      // return the structure of the jacobian of the constraints
+      // literally fill the 1d-idx into 2d grid (mxn)
+      for (Index row = 0; row < m; row++) {
+          for (Index col = 0; col < n; col++) {
+              Index idx = row * n + col;
+              iRow[idx] = row;
+              jCol[idx] = col;
+          }
+	  }
+   }
+   else
+   {
+      // return the values of the jacobian of the constraints
+       Eigen::MatrixXd grad_g_mat = grad_g_all(x, n);
+	   Eigen::MatrixXd jacob_mat = grad_g_mat.transpose();
+       // literally fill the 1d-idx into 2d grid (mxn)
+       for (Index row = 0; row < m; row++) {
+           for (Index col = 0; col < n; col++) {
+               Index idx = row * n + col;
+               values[idx] = jacob_mat(row, col); // note the transpose here
+           }
+	   }
+   }
+
+   return true;
+}
+
+
+
+void MyNLP::finalize_solution(
+   SolverReturn               status,
+   Index                      n,
+   const Number*              x,
+   const Number*              z_L,
+   const Number*              z_U,
+   Index                      m,
+   const Number*              g,
+   const Number*              lambda,
+   Number                     obj_value,
+   const IpoptData*           ip_data,
+   IpoptCalculatedQuantities* ip_cq
+)
+{
+   // here is where we would store the solution to variables, or write to a file, etc
+   // so we could use the solution.
+}
+
+
+// private methods imported
+
+double MyNLP::objPower(const Number* x) {
+    // convert x to vector<double>
+	std::vector<double> x_vec(MaxTurbines); // to be fixed
+    for (Index i = 0; i < MaxTurbines; i++) {
+        x_vec[i] = x[i];
+    }
+	// set yaw angles
+	farmopt->setYawAngles(x_vec);
+    double total_power = 0.0;
+    int nt = static_cast<int>(this->farmopt->layout.rows());
+    for (int i = 0; i < nt; i++) {
+        total_power += this->farmopt->turbine_chart[i].getPower();
+    }
+    return total_power;
+}
+
+// g(x) (constriants) implementation can be added here if needed
+Eigen::VectorXd MyNLP::gval(const Number* x, std::vector<double>& lwrbnd) {
+    Eigen::VectorXd g_vec(2);
+    std::vector<double> x_vec(MaxTurbines); // to be fixed
+    for (Index i = 0; i < MaxTurbines; i++) {
+        x_vec[i] = x[i];
+    }
+	farmopt->setYawAngles(x_vec);
+    double total_power = 0.0;
+    for (int idx : farmopt->qz_12) {
+        total_power += farmopt->turbine_chart[idx - 1].getPower(); // idx assumed 1-based
+    }
+    g_vec(0) = total_power - lwrbnd[0];
+    total_power = 0.0;
+    for (int idx : farmopt->qz_3) {
+        total_power += farmopt->turbine_chart[idx - 1].getPower();
+    }
+    g_vec(1) = total_power - lwrbnd[1];
+    return g_vec;
+}
+
+
+double MyNLP::grad_f_i(const Number* x, int idx) {
+	// center-differencing method
+	WindFarmOptimization w = *farmopt; // make a copy to avoid modifying original
+	double yaw_org = w.turbine_chart[idx - 1].yaw_angle;
+	double h = 1; // small perturbation
+	w.turbine_chart[idx - 1].yaw_angle = yaw_org + h;
+	w.calculateWake();
+	double pwr_plus = w.getFarmPower();
+	w.turbine_chart[idx - 1].yaw_angle = yaw_org - h;
+	w.calculateWake();
+	double pwr_minus = w.getFarmPower();
+	double grad_fi = (pwr_plus - pwr_minus) / (2 * h);
+	return -grad_fi; // Note the negative sign for maximization
+}
+
+
+// grad_f
+Eigen::VectorXd MyNLP::grad_f_all(const Number* x, int n) {
+	omp_set_num_threads(15);
+	int nt = static_cast<int>(farmopt->layout.rows());
+	// convert x to vector<double>
+	std::vector<double> yaw_angles(n); // to be fixed
+	for (Index i = 0; i < n; i++) {
+		yaw_angles[i] = x[i];
+	}
+	farmopt->setYawAngles(yaw_angles);
+	Eigen::VectorXd grad_f_vec(nt);
+	// compute grad_f for each turbine, idx is 1-based
+	// parallel computation to be implemented later
+	std::vector<double> grad_f_vector(nt);
+	#pragma omp parallel for
+		for (int i = 0; i < nt; i++) {
+			grad_f_vector[i] = grad_f_i(x, i + 1); // idx is 1-based
+	}
+	grad_f_vec = Eigen::Map<Eigen::VectorXd>(grad_f_vector.data(), grad_f_vector.size());
+	return grad_f_vec;
+}
+
+Eigen::VectorXd MyNLP::grad_g_i(const Number* x, int idx) {
+	// center-differencing method
+	WindFarmOptimization w = *farmopt; // make a copy to avoid modifying original
+	double yaw_org = w.turbine_chart[idx - 1].yaw_angle;
+	double h = 0.1; // small perturbation
+	w.turbine_chart[idx - 1].yaw_angle = yaw_org + h;
+	w.calculateWake();
+	Eigen::VectorXd g_plus(2);
+	double total_power = 0.0;
+	for (int idx : farmopt->qz_12) {
+		total_power += w.turbine_chart[idx - 1].getPower(); // idx assumed 1-based
+	}
+	g_plus(0) = total_power;
+	total_power = 0.0;
+	for (int idx : farmopt->qz_3) {
+		total_power += w.turbine_chart[idx - 1].getPower();
+	}
+	g_plus(1) = total_power;
+	w.turbine_chart[idx - 1].yaw_angle = yaw_org - h;
+	w.calculateWake();
+	Eigen::VectorXd g_minus(2);
+	total_power = 0.0;
+	for (int idx : farmopt->qz_12) {
+		total_power += w.turbine_chart[idx - 1].getPower(); // idx assumed 1-based
+	}
+	g_minus(0) = total_power;
+	total_power = 0.0;
+	for (int idx : farmopt->qz_3) {
+		total_power += w.turbine_chart[idx - 1].getPower();
+	}
+	g_minus(1) = total_power;
+	return -(g_plus - g_minus) / (2 * h); // Note the negative sign for maximization
+}
+
+// grad_g
+Eigen::MatrixXd MyNLP::grad_g_all(const Number* x, int n) {
+	omp_set_num_threads(15);
+	std::vector<double> yaw_angles(n); // to be fixed
+	for (Index i = 0; i < n; i++) {
+		yaw_angles[i] = x[i];
+	}
+	farmopt->setYawAngles(yaw_angles);
+	int nt = static_cast<int>(farmopt->layout.rows());
+	Eigen::MatrixXd grad_g_mat(nt, 2); // nt x 2 matrix, 2 indicates two constraints
+	// compute grad_g for each turbine, idx is 1-based
+	// parallel computation to be implemented later
+#pragma omp parallel for
+	for (int i = 0; i < nt; i++) {
+		Eigen::VectorXd grad_gi = grad_g_i(x, i + 1); // 1x2 vector
+		Eigen::RowVectorXd grad_gi_row(grad_gi);
+		grad_g_mat.row(i) = grad_gi_row; // idx is 1-based
+	}
+	return grad_g_mat;
+}
+
+// grad_f and grad_g implementations can be added here if needed
+
 
 // Initialization function
 bool initializeWindFarm() {
 	if (g_farmopt == nullptr) {
 		try {
+			// Eigen::setNbThreads(1);
+    		// 设置 MKL 线程数
+    		// mkl_set_num_threads(15);
 			int sqz_12 = 92;
 			// manually set params for verification
 			std::vector<int> t_qz_12(sqz_12); // 1-92
@@ -88,12 +598,13 @@ bool optimizeWindFarm(double new_wind_speed, double new_wind_direction, std::vec
 		}
 
 		// Set optimization options
-		app->Options()->SetIntegerValue("print_level", 3);
+		app->Options()->SetIntegerValue("print_level", 0);
 		app->Options()->SetStringValue("linear_solver", "ma57");
 		app->Options()->SetStringValue("linear_system_scaling", "none");
 		app->Options()->SetStringValue("output_file", "ipopt_out.txt");
 		app->Options()->SetStringValue("hessian_approximation", "limited-memory");
 		app->Options()->SetIntegerValue("max_iter", 2);
+		app->Options()->SetStringValue("sb", "yes");
 
 		status = app->OptimizeTNLP(mynlp);
 
@@ -122,4 +633,72 @@ void cleanupWindFarm() {
 		delete g_farmopt;
 		g_farmopt = nullptr;
 	}
+}
+
+
+// Toolset functions
+std::vector<std::vector<double>> readCSV(const std::string& filename) {
+    std::vector<std::vector<double>> data;
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件: " << filename << std::endl;
+        return data; // 返回空vector
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::vector<double> row;
+        std::stringstream ss(line);
+        std::string cell;
+        while (std::getline(ss, cell, ',')) {
+            if (!cell.empty()) {
+                row.push_back(std::stod(cell));
+            }
+        }
+        if (!row.empty()) {
+            data.push_back(row);
+        }
+    }
+    file.close();
+    return data;
+}
+
+std::vector<std::vector<int>> readCSVInt(const std::string& filename) {
+    std::vector<std::vector<int>> data;
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件: " << filename << std::endl;
+        return data; // 返回空vector
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::vector<int> row;
+        std::stringstream ss(line);
+        std::string cell;
+        while (std::getline(ss, cell, ',')) {
+            if (!cell.empty()) {
+                row.push_back(std::stoi(cell));
+            }
+        }
+        if (!row.empty()) {
+            data.push_back(row);
+        }
+    }
+    file.close();
+    return data;
+}
+
+std::vector<std::vector<double>> generateRandomPT(int m, int n, double lwr, double upr) {
+    std::vector<std::vector<double>> PT(m, std::vector<double>(n));
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(lwr, upr);
+
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            PT[i][j] = dis(gen);
+        }
+    }
+    return PT;
 }

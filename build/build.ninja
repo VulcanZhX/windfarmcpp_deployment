@@ -41,88 +41,109 @@ include CMakeFiles/rules.ninja
 
 cmake_ninja_workdir = /home/legion/codespace_test/build/
 # =============================================================================
+# Object build statements for SHARED_LIBRARY target wfclass
+
+
+#############################################
+# Order-only phony target for wfclass
+
+build cmake_object_order_depends_target_wfclass: phony || CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/Turbine.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/Turbine.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/Turbine.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/Turbulence.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/Turbulence.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/Turbulence.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/combination.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/combination.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/combination.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/Deflection.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/Deflection.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/Deflection.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/Farm.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/Farm.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/Farm.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/Rotation.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/Rotation.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/Rotation.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/Velocity.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/Velocity.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/Velocity.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+build CMakeFiles/wfclass.dir/wrappedfunc.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /home/legion/codespace_test/wrappedfunc.cpp || cmake_object_order_depends_target_wfclass
+  DEFINES = -Dwfclass_EXPORTS
+  DEP_FILE = CMakeFiles/wfclass.dir/wrappedfunc.cpp.o.d
+  FLAGS = -O3 -g -std=gnu++14 -fPIC
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
+
+
+# =============================================================================
+# Link build statements for SHARED_LIBRARY target wfclass
+
+
+#############################################
+# Link the shared library /home/legion/codespace_test/internal/lib/libwfclass.so
+
+build /home/legion/codespace_test/internal/lib/libwfclass.so: CXX_SHARED_LIBRARY_LINKER__wfclass_Debug CMakeFiles/wfclass.dir/Turbine.cpp.o CMakeFiles/wfclass.dir/Turbulence.cpp.o CMakeFiles/wfclass.dir/combination.cpp.o CMakeFiles/wfclass.dir/Deflection.cpp.o CMakeFiles/wfclass.dir/Farm.cpp.o CMakeFiles/wfclass.dir/Rotation.cpp.o CMakeFiles/wfclass.dir/Velocity.cpp.o CMakeFiles/wfclass.dir/wrappedfunc.cpp.o
+  LANGUAGE_COMPILE_FLAGS = -O3 -g
+  OBJECT_DIR = CMakeFiles/wfclass.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  SONAME = libwfclass.so
+  SONAME_FLAG = -Wl,-soname,
+  TARGET_FILE = /home/legion/codespace_test/internal/lib/libwfclass.so
+  TARGET_PDB = wfclass.so.dbg
+
+# =============================================================================
 # Object build statements for EXECUTABLE target wfoptim
 
 
 #############################################
 # Order-only phony target for wfoptim
 
-build cmake_object_order_depends_target_wfoptim: phony || CMakeFiles/wfoptim.dir
+build cmake_object_order_depends_target_wfoptim: phony || cmake_object_order_depends_target_wfclass
 
 build CMakeFiles/wfoptim.dir/cpp_example.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/cpp_example.cpp || cmake_object_order_depends_target_wfoptim
   DEP_FILE = CMakeFiles/wfoptim.dir/cpp_example.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Turbine.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Turbine.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Turbine.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Turbulence.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Turbulence.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Turbulence.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/combination.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/combination.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/combination.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Deflection.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Deflection.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Deflection.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Farm.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Farm.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Farm.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/MyNLP.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/MyNLP.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/MyNLP.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Rotation.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Rotation.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Rotation.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Velocity.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Velocity.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Velocity.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/Toolset.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/Toolset.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/Toolset.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
-  OBJECT_DIR = CMakeFiles/wfoptim.dir
-  OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
-
-build CMakeFiles/wfoptim.dir/wrappedfunc.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/wrappedfunc.cpp || cmake_object_order_depends_target_wfoptim
-  DEP_FILE = CMakeFiles/wfoptim.dir/wrappedfunc.cpp.o.d
-  FLAGS = -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/external/StaticHSL/include -I/home/legion/codespace_test/external/StaticIPOPT/include/coin-or -I/home/legion/codespace_test/external/StaticMumps/include
+  FLAGS = -O3 -g -std=gnu++14 -fopenmp
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfoptim.dir
   OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
 
@@ -134,10 +155,9 @@ build CMakeFiles/wfoptim.dir/wrappedfunc.cpp.o: CXX_COMPILER__wfoptim_unscanned_
 #############################################
 # Link the executable wfoptim
 
-build wfoptim: CXX_EXECUTABLE_LINKER__wfoptim_Debug CMakeFiles/wfoptim.dir/cpp_example.cpp.o CMakeFiles/wfoptim.dir/Turbine.cpp.o CMakeFiles/wfoptim.dir/Turbulence.cpp.o CMakeFiles/wfoptim.dir/combination.cpp.o CMakeFiles/wfoptim.dir/Deflection.cpp.o CMakeFiles/wfoptim.dir/Farm.cpp.o CMakeFiles/wfoptim.dir/MyNLP.cpp.o CMakeFiles/wfoptim.dir/Rotation.cpp.o CMakeFiles/wfoptim.dir/Velocity.cpp.o CMakeFiles/wfoptim.dir/Toolset.cpp.o CMakeFiles/wfoptim.dir/wrappedfunc.cpp.o | /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a
-  FLAGS = -g
-  LINK_LIBRARIES = -Wl,-rpath,/home/legion/codespace_test/external/StaticHSL/lib:/home/legion/codespace_test/external/StaticIPOPT/lib:/home/legion/codespace_test/external/StaticMumps/lib  -Wl,--start-group  -lipopt  -lcoinhsl  -lcoinmumps  -llapack  -lblas  -Wl,--end-group  -lpthread  -lgfortran  -lm  /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
-  LINK_PATH = -L/home/legion/codespace_test/external/StaticHSL/lib   -L/home/legion/codespace_test/external/StaticIPOPT/lib   -L/home/legion/codespace_test/external/StaticMumps/lib
+build wfoptim: CXX_EXECUTABLE_LINKER__wfoptim_Debug CMakeFiles/wfoptim.dir/cpp_example.cpp.o | /home/legion/codespace_test/internal/lib/libwfclass.so /home/legion/codespace_test/external/libsolver.a /home/legion/codespace_test/external/libcoinhsl.a /home/legion/codespace_test/external/libcoinmumps.a /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/legion/codespace_test/internal/lib/libwfclass.so
+  FLAGS = -O3 -g
+  LINK_LIBRARIES = -Wl,-rpath,/home/legion/codespace_test/internal/lib  /home/legion/codespace_test/internal/lib/libwfclass.so  -Wl,--start-group  /home/legion/codespace_test/external/libsolver.a  /home/legion/codespace_test/external/libcoinhsl.a  /home/legion/codespace_test/external/libcoinmumps.a  -lmetis  -llapack  -lblas  -Wl,--end-group  -lpthread  -lgfortran  -lm  /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
   OBJECT_DIR = CMakeFiles/wfoptim.dir
   POST_BUILD = :
   PRE_LINK = :
@@ -170,6 +190,10 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 # =============================================================================
 # Target aliases.
 
+build libwfclass.so: phony /home/legion/codespace_test/internal/lib/libwfclass.so
+
+build wfclass: phony /home/legion/codespace_test/internal/lib/libwfclass.so
+
 # =============================================================================
 # Folder targets.
 
@@ -178,7 +202,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 #############################################
 # Folder: /home/legion/codespace_test/build
 
-build all: phony wfoptim
+build all: phony /home/legion/codespace_test/internal/lib/libwfclass.so wfoptim
 
 # =============================================================================
 # Built-in targets

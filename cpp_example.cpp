@@ -9,7 +9,7 @@ int main(int, char**)
 	// initialize windfarm only once
 	initializeWindFarm();
 	// update windfarm and perform optimization
-	double new_wind_speed = 10.0;
+	double new_wind_speed = 9.5;
 	double new_wind_direction = 275.0;
 	std::vector<double> new_yaw_angles = generateRandomPT(1, MaxTurbines, -30.0, 30.0)[0];
 	optimizeWindFarm(new_wind_speed, new_wind_direction, new_yaw_angles);

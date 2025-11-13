@@ -198,9 +198,9 @@ RotatedResult WindFarmOptimization::compute_rotated() {
 	double x_max = 12000;
 	//polynomial coefficients for delta_y calculation (order=6)
 	VectorXd p11(7), p22(7), p33(7);
-	p11 << 10.0036, -17.567, -11.4904, 10.5864, 42.2003, -73.2544, -634.79;
-	p22 << 11.2166, -16.8436, -21.0378, 20.0129, 34.061, -45.3254, -465.76;
-	p33 << 11.0171, -17.3562, -18.3961, 17.581, 36.6349, -53.5914, -520.945;
+	p11 << -187.28, 112.52, 111.71, -5.10, -79.72, 59.76, 317.95;
+	p22 << -189.79, 114.62, 138.67, -36.62, -63.11, 36.72, 233.29;
+	p33 << -191.51, 116.13, 131.87, -28.07, -68.37, 43.51, 260.93;
 	std::vector<std::vector<VectorXd>> y_model(N);
 	std::vector<std::vector<int>> idx_compact(N);
 	std::vector<std::vector<int>> idx_mask(N);
@@ -215,7 +215,7 @@ RotatedResult WindFarmOptimization::compute_rotated() {
 			 idx_mask[i].push_back(0);
 		}
 		//根据idx_compact 切片
-		VectorXd zz_sel = (x_d[i](idx_compact[i]).array()-6000)/3465.54;
+		VectorXd zz_sel = x_d[i](idx_compact[i]).array()/6000 - 1;
 		VectorXd y_sel1 = polyval(zz_sel, p11);
 		VectorXd y_sel2 = polyval(zz_sel, p22);
 		VectorXd y_sel3 = polyval(zz_sel, p33);
@@ -646,3 +646,5 @@ double calculate_overlap(const VectorXd& undisturbed_velocity, const VectorXd& d
 
 	return isAffected ? 1.0 : 0.0; // return 1 or 0 for if area_overlap > 0 check
 }
+
+
