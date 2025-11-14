@@ -6,9 +6,19 @@
 // Global static instance of WindFarmOptimization
 extern WindFarmOptimization* g_farmopt; // global pointer declaration
 bool initializeWindFarm();
-bool optimizeWindFarm(double new_wind_speed, // wind speed
+bool optimizeWindFarm(
+    double new_wind_speed, // wind speed
     double new_wind_direction, // wind direction
     std::vector<double>& new_yaw_angles); // yaw angles
+
+bool optimizeWindFarm(
+    const double new_wind_speed,        // 输入：风速（序列 5个） double 类
+    const double new_wind_direction,    // 输入：方向（序列 5个）
+    std::vector<double>& new_yaw_angles,      // 输出：各风机偏航角度，对应风机编号见 文件wind farm layout
+    double& new_power_12, // 输出青州12功率
+    double& new_power_3,  // 输出青州3功率
+    double& new_power_all // 输出全场功率
+    );
 void cleanupWindFarm();
 
 // 工具函数集

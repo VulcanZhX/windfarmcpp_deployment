@@ -155,9 +155,9 @@ build CMakeFiles/wfoptim.dir/cpp_example.cpp.o: CXX_COMPILER__wfoptim_unscanned_
 #############################################
 # Link the executable wfoptim
 
-build wfoptim: CXX_EXECUTABLE_LINKER__wfoptim_Debug CMakeFiles/wfoptim.dir/cpp_example.cpp.o | /home/legion/codespace_test/internal/lib/libwfclass.so /home/legion/codespace_test/external/libsolver.a /home/legion/codespace_test/external/libcoinhsl.a /home/legion/codespace_test/external/libcoinmumps.a /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/legion/codespace_test/internal/lib/libwfclass.so
+build wfoptim: CXX_EXECUTABLE_LINKER__wfoptim_Debug CMakeFiles/wfoptim.dir/cpp_example.cpp.o | /home/legion/codespace_test/internal/lib/libwfclass.so /home/legion/codespace_test/external/libsolver.so /home/legion/codespace_test/external/libcoinhsl.so /home/legion/codespace_test/external/libcoinmumps.so /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/legion/codespace_test/internal/lib/libwfclass.so
   FLAGS = -O3 -g
-  LINK_LIBRARIES = -Wl,-rpath,/home/legion/codespace_test/internal/lib  /home/legion/codespace_test/internal/lib/libwfclass.so  -Wl,--start-group  /home/legion/codespace_test/external/libsolver.a  /home/legion/codespace_test/external/libcoinhsl.a  /home/legion/codespace_test/external/libcoinmumps.a  -lmetis  -llapack  -lblas  -Wl,--end-group  -lpthread  -lgfortran  -lm  /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
+  LINK_LIBRARIES = -Wl,-rpath,/home/legion/codespace_test/internal/lib:/home/legion/codespace_test/external  /home/legion/codespace_test/internal/lib/libwfclass.so  -Wl,--start-group  /home/legion/codespace_test/external/libsolver.so  /home/legion/codespace_test/external/libcoinhsl.so  /home/legion/codespace_test/external/libcoinmumps.so  -lmetis  -llapack  -lblas  -Wl,--end-group  -lpthread  -lgfortran  -lm  /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
   OBJECT_DIR = CMakeFiles/wfoptim.dir
   POST_BUILD = :
   PRE_LINK = :

@@ -274,10 +274,9 @@ bool MyNLP::eval_f(
    Number&       obj_value
 )
 {
-   // return the value of the objective function
-	obj_value = objPower(const_cast<Number*>(x));
-
-   return true;
+	// return the value of the objective function
+	obj_value = -objPower(const_cast<Number*>(x)); // negative for maximization
+   	return true;
 }
 
 bool MyNLP::eval_grad_f(
@@ -572,7 +571,9 @@ bool initializeWindFarm() {
 }
 
 // Optimization function
-bool optimizeWindFarm(double new_wind_speed, double new_wind_direction, std::vector<double>& new_yaw_angles) {
+bool optimizeWindFarm(double new_wind_speed, 
+	double new_wind_direction, 
+	std::vector<double>& new_yaw_angles) {
 	if (!g_farmopt) {
 		std::cerr << "WindFarm not initialized!" << std::endl;
 		exit(-1);
@@ -587,7 +588,7 @@ bool optimizeWindFarm(double new_wind_speed, double new_wind_direction, std::vec
 	g_farmopt->wind_direction = new_wind_direction;
 	g_farmopt->setYawAngles(new_yaw_angles);
 	g_farmopt->calculateWake();
-	std::cout << "Wind Farm Power: " << 0.998*g_farmopt->getFarmPower() << " W" << std::endl;
+	std::cout << "Wind Farm Power: " << 0.9983*g_farmopt->getFarmPower() << " W" << std::endl;
 	try {
 		SmartPtr<TNLP> mynlp = new MyNLP(g_farmopt);
 		SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
@@ -626,6 +627,77 @@ bool optimizeWindFarm(double new_wind_speed, double new_wind_direction, std::vec
 		return false;
 	}
 }
+
+
+bool optimizeWindFarm(
+    const double new_wind_speed,        // 输入：风速（序列 5个） double 类
+    const double new_wind_direction,    // 输入：方向（序列 5个）
+    std::vector<double>& new_yaw_angles,      // 输出：各风机偏航角度，对应风机编号见 文件wind farm layout
+    double& new_power_12, // 输出：青州12功率
+    double& new_power_3, // 输出：青州3功率
+    double& new_power_all) // 输出：全场功率
+	{
+		if (!g_farmopt) {
+		std::cerr << "WindFarm not initialized!" << std::endl;
+		exit(-1);
+	}
+	// check args
+	if (new_yaw_angles.size() != MaxTurbines) {
+		std::cerr << "Yaw angles not correct." << std::endl;
+		// use default yaw angles
+		new_yaw_angles = generateRandomPT(1, MaxTurbines, -30.0, 30.0)[0];
+	}
+	g_farmopt->wind_speed = new_wind_speed;
+	g_farmopt->wind_direction = new_wind_direction;
+	g_farmopt->setYawAngles(new_yaw_angles);
+	g_farmopt->calculateWake();
+	std::cout << "Wind Farm Power: " << 0.998*g_farmopt->getFarmPower() << " W" << std::endl;
+	try {
+		SmartPtr<TNLP> mynlp = new MyNLP(g_farmopt);
+		SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
+		ApplicationReturnStatus status = app->Initialize();
+		if (status != Solve_Succeeded) {
+			std::cout << "*** Error during initialization!" << std::endl;
+			return false;
+		}
+
+		// Set optimization options
+		app->Options()->SetIntegerValue("print_level", 0);
+		app->Options()->SetStringValue("linear_solver", "ma57");
+		app->Options()->SetStringValue("linear_system_scaling", "none");
+		app->Options()->SetStringValue("output_file", "ipopt_out.txt");
+		app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+		app->Options()->SetIntegerValue("max_iter", 3);
+		app->Options()->SetStringValue("sb", "yes"); // get rid of IPOPT banner
+
+		status = app->OptimizeTNLP(mynlp);
+
+		if (status == Solve_Succeeded || status == Maximum_Iterations_Exceeded) {
+			Index iter_count = app->Statistics()->IterationCount();
+			std::cout << "*** Problem solved in " << iter_count << " iterations!" << std::endl;
+
+			// Number final_obj = app->Statistics()->FinalObjective();
+			// std::cout << "*** Final objective value: " << final_obj << std::endl;
+			Eigen::VectorXd yaw_eigen_new = g_farmopt->getYawAngles();
+			std::vector<double> yaw_vec_new(yaw_eigen_new.data(), yaw_eigen_new.data() + yaw_eigen_new.size());
+			new_yaw_angles = yaw_vec_new;
+			new_power_12 = g_farmopt->getFarmQingzhou12Power();
+			new_power_3 = g_farmopt->getFarmQingzhou3Power();
+			new_power_all = g_farmopt->getFarmPower();
+			return true;
+		}
+		else {
+			std::cout << "*** Optimization failed with status: " << status << std::endl;
+			return false;
+		}
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Optimization failed: " << e.what() << std::endl;
+		return false;
+	}
+}         
+
+
 
 // Cleanup function
 void cleanupWindFarm() {

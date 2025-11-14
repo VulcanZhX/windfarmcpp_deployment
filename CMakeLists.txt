@@ -51,18 +51,32 @@ set_target_properties(wfclass PROPERTIES
 # set_target_properties(coinmumps0 PROPERTIES
 #         IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/mumps/lib/libcoinmumps.so."
 # )
-add_library(hsl STATIC IMPORTED)
-set_target_properties(hsl PROPERTIES 
-        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libcoinhsl.a"
+# add_library(hsl STATIC IMPORTED)
+# set_target_properties(hsl PROPERTIES 
+#         IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libcoinhsl.a"
+# )
+# add_library(ipopt STATIC IMPORTED)
+# set_target_properties(ipopt PROPERTIES 
+#         IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libsolver.a"
+# )
+# add_library(coinmumps STATIC IMPORTED)
+# set_target_properties(coinmumps PROPERTIES 
+#         IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libcoinmumps.a"
+# )
+
+add_library(hsl0 SHARED IMPORTED)
+set_target_properties(hsl0 PROPERTIES 
+        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libcoinhsl.so"
 )
-add_library(ipopt STATIC IMPORTED)
-set_target_properties(ipopt PROPERTIES 
-        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libsolver.a"
+add_library(solver SHARED IMPORTED)
+set_target_properties(solver PROPERTIES 
+        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libsolver.so"
 )
-add_library(coinmumps STATIC IMPORTED)
-set_target_properties(coinmumps PROPERTIES 
-        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libcoinmumps.a"
+add_library(coinmumps0 SHARED IMPORTED)
+set_target_properties(coinmumps0 PROPERTIES 
+        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/external/libcoinmumps.so"
 )
+
 # add_executable(wfoptim cpp_example.cpp Turbine.cpp Turbulence.cpp
 #          combination.cpp Deflection.cpp
 #          Farm.cpp MyNLP.cpp
@@ -76,8 +90,8 @@ target_link_libraries(wfoptim wfclass OpenMP::OpenMP_CXX)
 # target_link_libraries(wfoptim hsl INSTALL_RPATH "${LIBDIR}"
 #     BUILD_WITH_INSTALL_RPATH TRUE)
 target_link_libraries(wfoptim -Wl,--start-group
-    ipopt hsl
-    coinmumps metis lapack
+    solver hsl0
+    coinmumps0 metis lapack
     blas
     -Wl,--end-group
     # mkl_intel_lp64
