@@ -27,13 +27,23 @@ WindFarmOptimization::WindFarmOptimization(
 	const std::vector<double>& yaw_vec,
 	const std::vector<double>& fatigue,
 	const std::vector<double>& fatigue_p,
+	const std::vector<std::vector<double>>& serial_coeff_all_val,
+	const std::vector<int>& status_all_val,
 	const std::vector<std::vector<double>>& layout_farm,
 	double wind_speed,
 	double wind_direction
 ) {
+	std::vector<double> tmp_serial_coeff = { 0.99, 0.98, 0.98 }; // default values
+	int tmp_status = 1;
 	n_turbines = t_qz[0].size() + t_qz[1].size() + t_qz[2].size();
-	Turbine turbine_c(PT, t_qz, turbulence_sheer_veer, turbine_diameter_vector, turbine_hub_height_vector, rated_power_vector, life_total_vector, repair_c_vector, fatigue, fatigue_p, 1);
-	std::vector<Turbine> turbine_chart_input(n_turbines, turbine_c);
+	status_all = status_all_val;
+	Turbine turbine_c(PT, t_qz, 
+		turbulence_sheer_veer, 
+		turbine_diameter_vector, turbine_hub_height_vector, 
+		rated_power_vector, life_total_vector, 
+		repair_c_vector, fatigue, 
+		fatigue_p, tmp_serial_coeff, tmp_status, 1);
+	std::vector<Turbine> turbine_chart_input(n_turbines, turbine_c); // template turbine_chart using turbine_c
 
 	// flatten layout_farm and store into Matrix layout... to be changed!
 	std::vector<double> flat_layout;
@@ -47,8 +57,15 @@ WindFarmOptimization::WindFarmOptimization(
 
 	int count_tn = 1; // label
 	for (auto& elem : turbine_chart_input) {
-		elem = Turbine(PT, t_qz, turbulence_sheer_veer, turbine_diameter_vector, turbine_hub_height_vector, rated_power_vector, life_total_vector, repair_c_vector, fatigue, fatigue_p, count_tn);
+		elem = Turbine(PT, t_qz, turbulence_sheer_veer,
+			turbine_diameter_vector, turbine_hub_height_vector,
+			rated_power_vector, life_total_vector, 
+			repair_c_vector, fatigue,
+			fatigue_p, tmp_serial_coeff, tmp_status, count_tn);
 		elem.yaw_angle = yaw_vec[count_tn - 1];
+		elem.serial_coeff = { serial_coeff_all_val[0][count_tn - 1],
+			serial_coeff_all_val[1][count_tn - 1],
+			serial_coeff_all_val[2][count_tn - 1]};
 		count_tn++;
 	}
 	turbine_chart = turbine_chart_input;
@@ -295,9 +312,13 @@ void WindFarmOptimization::calculateWake() {
 
 	// Iterate through turbines and calculate wake effects from each turbine
 	//omp_set_num_threads(8); // set number of threads
- //#pragma omp parallel for shared(u_wake, u_turb_wake)
+ 	//#pragma omp parallel for shared(u_wake, u_turb_wake)
 	for (int i = 0; i < n_turbines; i++) {
 		std::vector<double> u_wake_vec(u_wake.data(), u_wake.data() + u_wake.size());
+		// check whether the turbine is active
+		if (status_all[sorted_indexes[i] - 1] == 0) {
+			continue; // skip inactive turbines
+		}
 		turbine_chart[sorted_indexes[i] - 1].updateVelocities(u_wake_vec, this->wind_speed, sorted_indexes[i]);
 
 		// compute deflection
@@ -514,6 +535,19 @@ double WindFarmOptimization::getFarmQingzhou3Power() const {
 	}
 	return total_power;
 }
+
+// 获取场群优化结果（输出）
+// std::vector<std::vector<double>> WindFarmOptimization::getFarmOptimizationResult() const {
+// 	int nt = static_cast<int>(layout.rows());
+// 	std::vector<std::vector<double>> result(nt, std::vector<double>(4, 0.0)); // 每行: [x, y, yaw_angle, power]
+// 	for (int i = 0; i < nt; i++) {
+// 		result[i][0] = layout(i, 0); // x
+// 		result[i][1] = layout(i, 1); // y
+// 		result[i][2] = turbine_chart[i].yaw_angle; // yaw_angle
+// 		result[i][3] = turbine_chart[i].getPower(); // power
+// 	}
+// 	return result;
+// }
 
 // 获取场群各风机寿命
 

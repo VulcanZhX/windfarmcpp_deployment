@@ -1,16 +1,16 @@
 #ifndef TURBINE_HPP
 #define TURBINE_HPP
-// #define EIGEN_USE_MKL_ALL
-// #define EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_USE_MKL_ALL
+#define EIGEN_VECTORIZE_SSE4_2
 
 #include <Dense>
 #include <vector>
 #include <array>
 #include <cmath>
 #include <algorithm>
+#include "mkl.h"
 
-
-const double M_PI_LOCAL = 3.14159265358979323847;
+const double M_PI_LOCAL = 3.1416;
 //using namespace Eigen;
 
 class Turbine {
@@ -27,6 +27,8 @@ public:
         const std::vector<double>& repair_c_vector, // 维修成本
         const std::vector<double>& fatigue, // 疲劳
         const std::vector<double>& fatigue_p, // 疲劳参数
+        const std::vector<double>& serial_coeff_val, // 效能系数（3个串联环节）
+        int status_val, // binary status: 1-active, 0-inactive(converted from 0-34 to 0,1)
 		int count_tn // 机组编号，从1开始
     );
 
@@ -72,7 +74,9 @@ public:
     double life_work_coeff; // 寿命工作系数
     double life_turbulence_coeff; // 寿命湍流系数
     double generator_efficiency = 1; // 发电机效率
-
+    // additional params
+    std::vector<double> serial_coeff; // 效能系数（3个串联环节）
+    int status; // 风机状态，1-启用，0-停用
 	// optim variable
     double yaw_angle = 0; // 偏航角
 

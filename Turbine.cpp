@@ -19,6 +19,8 @@ Turbine::Turbine(
 	// 机组寿命计算系数
 	const std::vector<double>& fatigue,
 	const std::vector<double>& fatigue_p,
+	const std::vector<double>& serial_coeff_val,
+	int status_val = 1, // binary status: 1-active, 0-inactive(converted from 0-34 to 0,1)
 	int count_tn = 1 // 机组编号，从1开始
 ) {
 	// 机组类型判定
@@ -72,6 +74,9 @@ Turbine::Turbine(
 	life_work_coeff = 1.0 / (rated_power * life_total * (1 + repair_c));
 	life_turbulence_coeff = dis_coefficient / (fatigue_p[1] * life_total * (1 + repair_c));
 	velocities_u.reserve(3); //预分配空间
+	// additional params
+	serial_coeff = serial_coeff_val;
+	status = status_val;
 	updateRadius();
 	updateGrid();
 }
@@ -204,8 +209,10 @@ double Turbine::getCt() const {
 double Turbine::getPower() const {
 	double yaw_effective_velocity = getAverageVelocity();
 	double cptmp = getCp();
+	double efficiency_product = serial_coeff[0] * serial_coeff[1] * serial_coeff[2];
 	return 0.5 * air_density * M_PI_LOCAL * std::pow(rotor_radius, 2) * generator_efficiency *
-		std::pow(yaw_effective_velocity, 3) * cptmp * std::pow(std::cos(yaw_angle * M_PI_LOCAL / 180.0), 3);
+		std::pow(yaw_effective_velocity, 3) * cptmp * 
+		std::pow(std::cos(yaw_angle * M_PI_LOCAL / 180.0), 3) * efficiency_product;
 }
 
 // 综合疲劳系数

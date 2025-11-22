@@ -80,6 +80,8 @@ public:
     Eigen::VectorXd u; // 风速场
     Eigen::VectorXd turbulence; // 湍流场
     
+    // 风机状态储存
+    std::vector<int> status_all; // 所有风机状态数组
 	// Methods declarations
 
     // 构造函数
@@ -95,6 +97,8 @@ public:
         const std::vector<double>& yaw_vec, // 偏航角向量
         const std::vector<double>& fatigue, // 疲劳
         const std::vector<double>& fatigue_p, // 疲劳参数
+        const std::vector<std::vector<double>>& serial_coeff_all_val, // 效能系数（3个串联环节）
+	    const std::vector<int>& status_all_val, // 风机状态数组
         const std::vector<std::vector<double>>& layout_farm, // 风场布局
         double wind_speed, // 风速
         double wind_direction // 风向

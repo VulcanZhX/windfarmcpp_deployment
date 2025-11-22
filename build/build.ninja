@@ -53,7 +53,7 @@ build CMakeFiles/wfclass.dir/Turbine.cpp.o: CXX_COMPILER__wfclass_unscanned_Debu
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/Turbine.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -61,7 +61,7 @@ build CMakeFiles/wfclass.dir/Turbulence.cpp.o: CXX_COMPILER__wfclass_unscanned_D
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/Turbulence.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -69,7 +69,7 @@ build CMakeFiles/wfclass.dir/combination.cpp.o: CXX_COMPILER__wfclass_unscanned_
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/combination.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -77,7 +77,7 @@ build CMakeFiles/wfclass.dir/Deflection.cpp.o: CXX_COMPILER__wfclass_unscanned_D
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/Deflection.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -85,7 +85,7 @@ build CMakeFiles/wfclass.dir/Farm.cpp.o: CXX_COMPILER__wfclass_unscanned_Debug /
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/Farm.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -93,7 +93,7 @@ build CMakeFiles/wfclass.dir/Rotation.cpp.o: CXX_COMPILER__wfclass_unscanned_Deb
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/Rotation.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -101,7 +101,7 @@ build CMakeFiles/wfclass.dir/Velocity.cpp.o: CXX_COMPILER__wfclass_unscanned_Deb
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/Velocity.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -109,7 +109,7 @@ build CMakeFiles/wfclass.dir/wrappedfunc.cpp.o: CXX_COMPILER__wfclass_unscanned_
   DEFINES = -Dwfclass_EXPORTS
   DEP_FILE = CMakeFiles/wfclass.dir/wrappedfunc.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fPIC
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfclass.dir
   OBJECT_FILE_DIR = CMakeFiles/wfclass.dir
 
@@ -143,7 +143,7 @@ build cmake_object_order_depends_target_wfoptim: phony || cmake_object_order_dep
 build CMakeFiles/wfoptim.dir/cpp_example.cpp.o: CXX_COMPILER__wfoptim_unscanned_Debug /home/legion/codespace_test/cpp_example.cpp || cmake_object_order_depends_target_wfoptim
   DEP_FILE = CMakeFiles/wfoptim.dir/cpp_example.cpp.o.d
   FLAGS = -O3 -g -std=gnu++14 -fopenmp
-  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/codespace_test/include/coin-or
+  INCLUDES = -I/usr/include/eigen3/Eigen -I/home/legion/code_space_mkl/mkl/mkl/latest/include -I/home/legion/codespace_test/include/coin-or
   OBJECT_DIR = CMakeFiles/wfoptim.dir
   OBJECT_FILE_DIR = CMakeFiles/wfoptim.dir
 
@@ -155,9 +155,9 @@ build CMakeFiles/wfoptim.dir/cpp_example.cpp.o: CXX_COMPILER__wfoptim_unscanned_
 #############################################
 # Link the executable wfoptim
 
-build wfoptim: CXX_EXECUTABLE_LINKER__wfoptim_Debug CMakeFiles/wfoptim.dir/cpp_example.cpp.o | /home/legion/codespace_test/internal/lib/libwfclass.so /home/legion/codespace_test/external/libsolver.so /home/legion/codespace_test/external/libcoinhsl.so /home/legion/codespace_test/external/libcoinmumps.so /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/legion/codespace_test/internal/lib/libwfclass.so
+build wfoptim: CXX_EXECUTABLE_LINKER__wfoptim_Debug CMakeFiles/wfoptim.dir/cpp_example.cpp.o | /home/legion/codespace_test/internal/lib/libwfclass.so /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/legion/codespace_test/internal/lib/libwfclass.so
   FLAGS = -O3 -g
-  LINK_LIBRARIES = -Wl,-rpath,/home/legion/codespace_test/internal/lib:/home/legion/codespace_test/external  /home/legion/codespace_test/internal/lib/libwfclass.so  -Wl,--start-group  /home/legion/codespace_test/external/libsolver.so  /home/legion/codespace_test/external/libcoinhsl.so  /home/legion/codespace_test/external/libcoinmumps.so  -lmetis  -llapack  -lblas  -Wl,--end-group  -lpthread  -lgfortran  -lm  /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
+  LINK_LIBRARIES = -Wl,-rpath,/home/legion/codespace_test/internal/lib  /home/legion/codespace_test/internal/lib/libwfclass.so  -lipopt  -lmkl_intel_lp64  -lmkl_core  -lmkl_sequential  -lpthread  -lgfortran  -lm  /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
   OBJECT_DIR = CMakeFiles/wfoptim.dir
   POST_BUILD = :
   PRE_LINK = :

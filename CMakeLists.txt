@@ -1,13 +1,13 @@
+# This cmake is for building algorithm test example, not for package distribution
 cmake_minimum_required(VERSION 3.20)
 project(wfoptim)
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-O3" )
 # local include directories
 # Eigen include
 include_directories(/usr/include/eigen3/Eigen)
 # MKL include
-#include_directories(/home/legion/code_space_mkl/mkl/mkl/latest/include)
+include_directories(/home/legion/code_space_mkl/mkl/mkl/latest/include)
 
 include_directories(${CMAKE_SOURCE_DIR}/include/coin-or)
 
@@ -89,14 +89,19 @@ find_package(OpenMP REQUIRED)
 target_link_libraries(wfoptim wfclass OpenMP::OpenMP_CXX)
 # target_link_libraries(wfoptim hsl INSTALL_RPATH "${LIBDIR}"
 #     BUILD_WITH_INSTALL_RPATH TRUE)
-target_link_libraries(wfoptim -Wl,--start-group
-    solver hsl0
-    coinmumps0 metis lapack
-    blas
-    -Wl,--end-group
-    # mkl_intel_lp64
-    # mkl_core
-    # mkl_sequential
+# target_link_libraries(wfoptim -Wl,--start-group
+#     solver hsl0
+#     coinmumps0 metis
+#     -Wl,--end-group
+#     mkl_intel_lp64
+#     mkl_core
+#     mkl_sequential
+#     pthread gfortran m)
+
+target_link_libraries(wfoptim ipopt
+    mkl_intel_lp64
+    mkl_core
+    mkl_sequential
     pthread gfortran m)
 
 # set(DIR1 "${CMAKE_SOURCE_DIR}/external/ipopt/lib")
