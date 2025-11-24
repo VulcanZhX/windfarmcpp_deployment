@@ -2,7 +2,6 @@
 #define TURBINE_HPP
 #define EIGEN_USE_MKL_ALL
 #define EIGEN_VECTORIZE_SSE4_2
-
 #include <Dense>
 #include <vector>
 #include <array>
@@ -54,7 +53,7 @@ public:
     // 重新定义转子半径、直径
     void setRotorRadius(double r);
     void setRotorDiameter(double d);
-
+    
     // 更新网格
     void updateGrid();
     // 更新转子半径

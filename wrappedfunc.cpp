@@ -1,6 +1,6 @@
 // Initialization will only be done once, subsequent calls will skip initialization.
 
-#include "wrappedfunc.hpp"
+#include "wrappedfunc.hpp" // Eigen is included here
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include <IpOptionsList.hpp>
@@ -10,20 +10,46 @@
 
 #include "IpTNLP.hpp"
 #include "Farm.hpp"
+#include "rapidcsv.h"
+
+// limit mkl threads to 2
+#ifdef MKL_MAX_THREADS
+#undef MKL_MAX_THREADS
+#endif
+#define MKL_MAX_THREADS 2
+
 WindFarmOptimization* g_farmopt = nullptr;
-// 参数读取器（一次完成）
-// 支持多段落读取，段落以#开头标识，后续可能扩展
-// 第一段为整数表格，后续段落为 double 表格
-// 返回结构体包含所有段落数据
+rapidcsv::Document* g_csv_doc = nullptr;
+
+// 全局表格数据：风向-风速-偏航角
+
 struct SegmentsData {
     std::vector<std::vector<std::vector<int>>> firstSegment;    // 整数表(t_qz, 风场12/3风机编号)
     std::vector<std::vector<std::vector<double>>> otherSegments; // double表（风场参数表，功率/推力表，风机位置）
     int states = 0; // 读取状态标志
 };
 
+// 参数读取器（一次完成）
+// 支持多段落读取，段落以#开头标识，后续可能扩展
+// 第一段为整数表格，后续段落为 double 表格
+// 返回结构体包含所有段落数据
 SegmentsData readMultiSegmentCSV(const std::string& filename);
+
+// mxn 随机数生成器
+// 生成范围在[lwr, upr]之间的随机数
 std::vector<std::vector<double>> generateRandomPT(int m, int n, double lwr, double upr);
 
+
+// 双线性插值函数
+// 输入：
+//   x, y - 目标点坐标
+//   x0, y0 - 左下角点坐标
+//   x1, y1 - 右上角点坐标
+//   k00, k10, k01, k11 - 四个邻近点对应的值
+template<typename T>
+T bilinearInterpolation(double x, double y,
+                        double x0, double y0, double x1, double y1,
+                        const T& k00, const T& k10, const T& k01, const T& k11);
 
 using namespace Ipopt;
 
@@ -436,10 +462,15 @@ double MyNLP::grad_f_i(const Number* x, int idx) {
 	return -grad_fi; // Note the negative sign for maximization
 }
 
+// analytic?
+// to be added
+
 
 // grad_f
 Eigen::VectorXd MyNLP::grad_f_all(const Number* x, int n, int pthreads) {
 	omp_set_num_threads(this->pthreads);
+	omp_set_nested(1);  // 允许嵌套并行
+	// close mkl_dynamic
 	int nt = static_cast<int>(farmopt->layout.rows());
 	// convert x to vector<double>
 	std::vector<double> yaw_angles(n); // to be fixed
@@ -456,6 +487,7 @@ Eigen::VectorXd MyNLP::grad_f_all(const Number* x, int n, int pthreads) {
 			grad_f_vector[i] = grad_f_i(x, i + 1); // idx is 1-based
 	}
 	grad_f_vec = Eigen::Map<Eigen::VectorXd>(grad_f_vector.data(), grad_f_vector.size());
+	// open mkl_dynamic
 	return grad_f_vec;
 }
 
@@ -496,6 +528,7 @@ Eigen::VectorXd MyNLP::grad_g_i(const Number* x, int idx) {
 // grad_g
 Eigen::MatrixXd MyNLP::grad_g_all(const Number* x, int n) {
 	omp_set_num_threads(this->pthreads);
+	omp_set_nested(1);  // 允许嵌套并行
 	std::vector<double> yaw_angles(n); // to be fixed
 	for (Index i = 0; i < n; i++) {
 		yaw_angles[i] = x[i];
@@ -518,6 +551,7 @@ Eigen::MatrixXd MyNLP::grad_g_all(const Number* x, int n) {
 
 // Initialization function
 bool initializeWindFarm() {
+	mkl_set_num_threads(MKL_MAX_THREADS); // limit MKL threads
 	if (g_farmopt == nullptr) {
 		try {
 			// Eigen::setNbThreads(1);
@@ -547,7 +581,6 @@ bool initializeWindFarm() {
 			const std::vector<double> rated_power_vector = params[3];
 			const std::vector<double> life_total_vector = params[4];
 			const std::vector<double> repair_c_vector = params[5];
-
 			std::vector<double> fatigue(159, 0);
 			const std::vector<double> fatigue_p = params[6];
 
@@ -558,27 +591,32 @@ bool initializeWindFarm() {
 			std::vector<std::vector<double>> XYZ = segData.otherSegments[2];
 			//std::vector<std::vector<double>> XYZ = readCSV("../xyz.csv");
 
-			std::vector<std::vector<double>> yaw_vec = generateRandomPT(1, 159, -30.0, 30.0);
+			// init table
+			std::vector<double> yaw_vec(159, 30.0);
+			//std::vector<std::vector<double>> yaw_vec = generateRandomPT(1, 159, -30.0, 30.0);
 			double wind_speed = 10;
 			double wind_direction = 60;
 
 			// additional params: serial_coeff_all_val, status_all_val
-			std::vector<std::vector<double>> serial_coeff_all_val(3, std::vector<double>(159, 0.99)); // suppose all 0.99 for simplicity
+			std::vector<std::vector<double>> serial_coeff_all_val(3, std::vector<double>(159, 1)); // suppose all 0.99 for simplicity
 			std::vector<int> status_all_val(159, 14); // all active
 
             status_convert2bin(status_all_val);
+
+			// read init_table to the null global csv document
+			g_csv_doc = new rapidcsv::Document("../data/init_table.csv");
 
             // Create static instance
 			g_farmopt = new WindFarmOptimization(PT, t_qz,
 				turbulence_sheer_veer, turbine_diameter_vector,
 				turbine_hub_height_vector, rated_power_vector,
 				life_total_vector, repair_c_vector,
-				yaw_vec[0], fatigue, fatigue_p,
+				yaw_vec, fatigue, fatigue_p,
 				serial_coeff_all_val, status_all_val,
 				XYZ, wind_speed, wind_direction);
-
+			
 			return true;
-			g_farmopt->calculateWake();
+			
 		}
 		catch (const std::exception& e) {
 			std::cerr << "Initialization failed: " << e.what() << std::endl;
@@ -626,8 +664,39 @@ bool optimizeWindFarm(
 	}
 	g_farmopt->wind_speed = mwind_speed[0];
 	g_farmopt->wind_direction = mwind_direction[0];
-	g_farmopt->setYawAngles(init_yaw_angles); // set initial yaw angles from the actual input
 
+	// set initial yaw value for optimization within limits (delta_yaw +/- 8 deg, yaw +/- yaw_bounds)
+
+
+	g_farmopt->setYawAngles(init_yaw_angles); // set initial yaw angles from the actual input
+	std::vector<double> wind_direction_tbl = {30, 45, 100, 145, 190, 225, 280, 325};
+	std::vector<double> wind_speed_tbl = {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+	// find the two nearest wind directions and speeds for bilinear interpolation
+	double wd = g_farmopt->wind_direction;
+	double ws = g_farmopt->wind_speed;
+	double wd0 = 0.0, wd1 = 0.0;
+	double ws0 = 0.0, ws1 = 0.0;
+	int i = 0, j = 0; // save indices
+	for (i = 0; i < wind_direction_tbl.size() - 1; i++) {
+		if (wd >= wind_direction_tbl[i] && wd <= wind_direction_tbl[i + 1]) {
+			wd0 = wind_direction_tbl[i];
+			wd1 = wind_direction_tbl[i + 1];
+			break;
+		}
+	}
+	for (j = 0; j < wind_speed_tbl.size() - 1; j++) {
+		if (ws >= wind_speed_tbl[j] && ws <= wind_speed_tbl[j + 1]) {
+			ws0 = wind_speed_tbl[j];
+			ws1 = wind_speed_tbl[j + 1];
+			break;
+		}
+	}
+
+	// get yaw angles of the four corners
+
+
+	// use bilinear interpolation to get init yaw for each turbine
 
 	// update status and mEER_turbines for all turbines
 	for (size_t i = 0; i < MaxTurbines; i++) {
@@ -932,6 +1001,16 @@ std::vector<std::vector<double>> generateRandomPT(int m, int n, double lwr, doub
     return PT;
 }
 
-// yaw_delta/yaw_limit examples
-// -3, 3, 0.15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-// -30, 30,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+template<typename T>
+T bilinearInterpolation(double x, double y,
+                        double x0, double y0, double x1, double y1,
+                        const T& k00, const T& k10, const T& k01, const T& k11) {
+    double t = (x - x0) / (x1 - x0);
+    double u = (y - y0) / (y1 - y0);
+
+    return (1 - t) * (1 - u) * k00
+         + t * (1 - u) * k10
+         + (1 - t) * u * k01
+         + t * u * k11;
+}

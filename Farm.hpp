@@ -140,8 +140,11 @@ public:
     // 获取青州3风场功率
     double getFarmQingzhou3Power() const;
 
-    // 风场效能函数
-    double farmEfficiencyFunction() const; // to be implemented
+    // 获取所有风机寿命系数
+    Eigen::VectorXd getTurbinesLife() const;
+
+    // 获取风场寿命系数
+    double getFarmLife() const;
 
     // 计算尾流影响
     void calculateWake();

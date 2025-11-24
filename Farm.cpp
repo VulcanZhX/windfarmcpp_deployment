@@ -266,7 +266,6 @@ RotatedResult WindFarmOptimization::compute_rotated() {
 	result.R_half = R_half;
 	result.y_model = y_model;
 	result.idx_mask = idx_mask;
-
 	return result;
 }
 
@@ -536,93 +535,23 @@ double WindFarmOptimization::getFarmQingzhou3Power() const {
 	return total_power;
 }
 
-// 获取场群优化结果（输出）
-// std::vector<std::vector<double>> WindFarmOptimization::getFarmOptimizationResult() const {
-// 	int nt = static_cast<int>(layout.rows());
-// 	std::vector<std::vector<double>> result(nt, std::vector<double>(4, 0.0)); // 每行: [x, y, yaw_angle, power]
-// 	for (int i = 0; i < nt; i++) {
-// 		result[i][0] = layout(i, 0); // x
-// 		result[i][1] = layout(i, 1); // y
-// 		result[i][2] = turbine_chart[i].yaw_angle; // yaw_angle
-// 		result[i][3] = turbine_chart[i].getPower(); // power
-// 	}
-// 	return result;
-// }
+
 
 // 获取场群各风机寿命
+Eigen::VectorXd WindFarmOptimization::getTurbinesLife() const {
+	int nt = static_cast<int>(layout.rows());
+	VectorXd life_factors(nt);
+	for (int i = 0; i < nt; i++) {
+		life_factors(i) = this->turbine_chart[i].getComprehensiveFatigueCoefficient();
+	}
+	return life_factors;
+}	
 
-// // 优化相关函数
-//
-// // grad_f_yaw_i
-// // NOTE: idx is 1-based!
-// double WindFarmOptimization::grad_f_yaw_i(int idx) {
-// 	// center-differencing method
-// 	WindFarmOptimization w = *this; // make a copy to avoid modifying original
-// 	double yaw_org = w.turbine_chart[idx - 1].yaw_angle;
-// 	double h = 1; // small perturbation
-// 	w.turbine_chart[idx - 1].yaw_angle = yaw_org + h;
-// 	w.calculateWake();
-// 	double pwr_plus = getFarmPower();
-// 	w.turbine_chart[idx - 1].yaw_angle = yaw_org - h;
-// 	w.calculateWake();
-// 	double pwr_minus = getFarmPower();
-// 	double grad_fi = (pwr_plus - pwr_minus) / (2 * h);
-// 	return grad_fi;
-// }
-//
-//
-// // grad_f
-// VectorXd WindFarmOptimization::grad_f(const std::vector<double>& yaw_angles) {
-// 	omp_set_num_threads(15);
-// 	int nt = static_cast<int>(layout.rows());
-// 	setYawAngles(yaw_angles);
-// 	VectorXd grad_f_vec(nt);
-// 	// compute grad_f for each turbine, idx is 1-based
-// 	// parallel computation to be implemented later
-// 	std::vector<double> grad_f_vector(nt);
-// 	#pragma omp parallel for
-// 		for (int i = 0; i < nt; i++) {
-// 			grad_f_vector[i] = grad_f_yaw_i(i + 1); // idx is 1-based
-// 	}
-// 	grad_f_vec = Eigen::Map<VectorXd>(grad_f_vector.data(), grad_f_vector.size());
-// 	return grad_f_vec;
-// }
-//
-// // grad_g_yaw_i
-// VectorXd WindFarmOptimization::grad_g_yaw_i(int idx) {
-// 	// center-differencing method
-// 	WindFarmOptimization w = *this; // make a copy to avoid modifying original
-// 	double yaw_org = w.turbine_chart[idx - 1].yaw_angle;
-// 	double h = 0.1; // small perturbation
-// 	w.turbine_chart[idx - 1].yaw_angle = yaw_org + h;
-// 	w.calculateWake();
-// 	VectorXd g_plus(2);
-// 	g_plus << getFarmQingzhou12Power(), getFarmQingzhou3Power();
-// 	w.turbine_chart[idx - 1].yaw_angle = yaw_org - h;
-// 	w.calculateWake();
-// 	VectorXd g_minus(2);
-// 	g_minus << getFarmQingzhou12Power(), getFarmQingzhou3Power();
-// 	return (g_plus - g_minus) / (2 * h);
-// }
-//
-// // grad_g
-// MatrixXd WindFarmOptimization::grad_g(const std::vector<double>& yaw_angles) {
-// 	omp_set_num_threads(15);
-//
-// 	setYawAngles(yaw_angles);
-// 	int nt = static_cast<int>(layout.rows());
-// 	MatrixXd grad_g_mat(nt, 2); // nt x 2 matrix, 2 indicates two constraints
-// 	// compute grad_g for each turbine, idx is 1-based
-// 	// parallel computation to be implemented later
-// 	#pragma omp parallel for
-// 		for (int i = 0; i < nt; i++) {
-// 			VectorXd grad_gi = grad_g_yaw_i(i + 1); // 1x2 vector
-// 			RowVectorXd grad_gi_row(grad_gi);
-// 			grad_g_mat.row(i) = grad_gi_row; // idx is 1-based
-// 		}
-//
-// 	return grad_g_mat;
-// }
+// 获取风场寿命系数(平均数)
+double WindFarmOptimization::getFarmLife() const {
+	VectorXd life_factors = getTurbinesLife();
+	return life_factors.mean();
+}
 
 
 // 坐标排序函数（按x轴）

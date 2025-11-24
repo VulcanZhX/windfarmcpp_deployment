@@ -1,0 +1,5 @@
+# 忽略 build 文件夹及其所有内容
+build/
+
+# 忽略 .vscode 文件夹及其所有内容
+.vscode/
