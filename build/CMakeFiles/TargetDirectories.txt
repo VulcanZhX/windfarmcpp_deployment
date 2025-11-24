@@ -1,4 +1,0 @@
-/home/legion/codespace_test/build/CMakeFiles/wfclass.dir
-/home/legion/codespace_test/build/CMakeFiles/wfoptim.dir
-/home/legion/codespace_test/build/CMakeFiles/edit_cache.dir
-/home/legion/codespace_test/build/CMakeFiles/rebuild_cache.dir
