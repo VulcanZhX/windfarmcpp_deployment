@@ -9,7 +9,7 @@
 #include <algorithm>
 #include "mkl.h"
 
-const double M_PI_LOCAL = 3.1416;
+const double M_PI_LOCAL = 3.1415926;
 //using namespace Eigen;
 
 class Turbine {

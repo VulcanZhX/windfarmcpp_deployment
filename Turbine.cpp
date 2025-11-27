@@ -226,7 +226,7 @@ double Turbine::getComprehensiveFatigueCoefficient() const {
 
 // 单机目标
 double Turbine::getSingleTurbineObjective() const {
-	return getPower() * optimization_period - annual_average_power * (getComprehensiveFatigueCoefficient() - past_comprehensive_fatigue_coefficient) * optimization_period;
+	return getPower() * optimization_period - 10000*annual_average_power * (getComprehensiveFatigueCoefficient() - past_comprehensive_fatigue_coefficient) * optimization_period;
 }
 
 // 单机发电量

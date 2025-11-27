@@ -18,7 +18,7 @@ extern WindFarmOptimization* g_farmopt;
       预计算数值。
  ------------------------------------------------------------------- */
 bool initializeWindFarm();
-void status_convert2bin(std::vector<int> &status_all_val);
+
 
 /**-----------------optimizeWindFarm--------------------------------
 /* 该函数负责在每个优化周期对各风场全寿命周期发电量进行优化。
@@ -39,6 +39,7 @@ bool optimizeWindFarm(
     const std::vector<double>& current_yaw_angles,    // 输入：各风机初始偏航角度，1x159 double vector 类型，单位为度
                                                    // 该vector的编号与现场风机布局图（青洲1-3风机布局图.pdf）的编号一致，vector的第i个元素对应风机布局图编号为i的风机
     const std::vector<int>& turbine_status,        // 输入：各风机启停状态，1x159 int vector 类型
+    const int analytic_grad_flag,                   // 输入：是否使用解析梯度，int 类型，0-否，1-是
     std::vector<double>& opt_yaw_angles,           // 输出：各风机偏航角度，1x159 double vector 类型，单位为度
                                                    // 该vector的编号与现场风机布局图（青洲1-3风机布局图.pdf）的编号一致，vector的第i个元素对应风机布局图编号为i的风机
     std::vector<double>& opt_power_turbines,       // 输出：全场每个风机的设定功率，1x159double vector类型，单位为W 功率<1e-2(实际<50)时 风机不发电（代表发电功率为0）
@@ -64,6 +65,7 @@ bool optimizeWindFarmCheck(
     const std::vector<double>& current_yaw_angles,    // 输入：各风机初始偏航角度，1x159 double vector 类型，单位为度
                                                    // 该vector的编号与现场风机布局图（青洲1-3风机布局图.pdf）的编号一致，vector的第i个元素对应风机布局图编号为i的风机
     const std::vector<int>& turbine_status, // 输入：各风机启停状态，1x159 int vector 类型
+    const int analytic_grad_flag,               // 输入：是否使用解析梯度，int 类型，0-否，1-是
     double& opt_power_farm_12,                  // 输出：青洲12总的最大可发功率，double 类型，单位为W （用于判断电网友好模式下的发电方式）
     double& opt_power_farm_3                    // 输出：青洲3总的最大可发功率，double 类型，单位为W（用于判断电网友好模式下的发电方式）
     );

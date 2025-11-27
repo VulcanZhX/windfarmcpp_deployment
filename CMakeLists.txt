@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-O3" )
 # local include directories
 # Eigen include
+set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 include_directories(/usr/include/eigen3/Eigen)
 # MKL include
 include_directories(/home/legion/code_space_mkl/mkl/mkl/latest/include)
