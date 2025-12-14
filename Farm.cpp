@@ -541,6 +541,21 @@ VectorXd WindFarmOptimization::getTurbinesTurbulence() const
 	return turbulences;
 }
 
+// 获取所有风机复合优化目标
+VectorXd WindFarmOptimization::getTurbinesObj() const
+{
+	int nt = static_cast<int>(layout.rows());
+	VectorXd objectives(nt);
+	for (int i = 0; i < nt; i++)
+	{
+		if (this->turbine_chart[i].status == 0)
+			objectives(i) = 0.0;
+		else
+			objectives(i) = this->turbine_chart[i].getSingleTurbineObjective();
+	}
+	return objectives;
+}
+
 // 获取风场总功率
 double WindFarmOptimization::getFarmPower() const
 {
@@ -673,174 +688,3 @@ int calculate_overlap(const VectorXd &undisturbed_velocity, const VectorXd &dist
 
 	return isAffected ? 1 : 0; // return 1 or 0 for if area_overlap > 0 check
 }
-
-/** P_gamma_i derivative computation */
-
-// // Helper function to find indices of elements in a vector
-// std::vector<int> find_indices(const std::vector<int> &vec, const std::vector<int> &targets)
-// {
-// 	std::vector<int> indices;
-// 	for (int target : targets)
-// 	{
-// 		auto it = std::find(vec.begin(), vec.end(), target);
-// 		if (it != vec.end())
-// 		{
-// 			indices.push_back(std::distance(vec.begin(), it));
-// 		}
-// 	}
-// 	return indices;
-// }
-
-// // kIdx is 1-based!
-// double WindFarmOptimization::grad_p_gamma_single(int kIdx, const Eigen::MatrixXi &wake_matrix, int mode = 0)
-// {
-// 	// 1. Prepare static cache if not already done
-// 	if (!this->cache_stored)
-// 	{
-// 		this->rotated_result_cache = this->prepareStaticCache();
-// 	}
-// 	const RotatedResult &rot = this->rotated_result_cache;
-
-// 	// 2. Find turbines affected by kIdx
-// 	// if mode = 0: pick all affected idx
-// 	// if mode = 1: pick idx in qz_12 only
-// 	// if mode = 2: pick idx in qz_3 only
-
-// 	// set two flags to show whether kIdx or affected_idx is empty according to the target mode
-// 	int empty_flag_i = 0;
-// 	int empty_flag_affected_idx = 0;
-
-// 	// hard-coded judgement for kIdx
-// 	if (kIdx < 92 && mode == 2)
-// 		empty_flag_i = 1;
-// 	else if (kIdx >= 92 && mode == 1)
-// 		empty_flag_i = 1;
-
-// 	std::vector<int> affected_indices;
-// 	for (int i = 0; i < wake_matrix.cols(); ++i)
-// 	{
-// 		if (wake_matrix(kIdx - 1, i) == 1)
-// 		{
-// 			if(mode == 0)
-// 				affected_indices.push_back(i);
-// 			else if(mode == 1)
-// 			{
-// 				// check if i in qz_12
-// 				if (std::find(qz_12.begin(), qz_12.end(), i + 1) != qz_12.end()) // i+1 for 1-based
-// 					affected_indices.push_back(i);
-// 			}
-// 			else if(mode == 2)
-// 			{
-// 				// check if i in qz_3
-// 				if (std::find(qz_3.begin(), qz_3.end(), i + 1) != qz_3.end()) // i+1 for 1-based
-// 					affected_indices.push_back(i);
-// 			}
-// 		}
-// 	}
-
-// 	// 3. Map original kIdx to its sorted position
-// 	auto it_k = std::find(rot.sorted_indexes.begin(), rot.sorted_indexes.end(), kIdx); // find kidx in 1 to 159
-// 	if (it_k == rot.sorted_indexes.end())
-// 	{
-// 		// Handle error: kIdx not found in sorted indices
-// 		return -1;
-// 	}
-// 	int kIdx_rot = std::distance(rot.sorted_indexes.begin(), it_k) + 1; // get kIdx_rot from ptr (also 1 based)
-
-// 	// 4. Get parameters for the current turbine (k)
-// 	const Turbine &k_turbine = this->turbine_chart[kIdx_rot - 1]; // new kIdx is idx in rotated_turb_chart
-// 	double D = k_turbine.rotor_diameter;
-// 	double Ct = k_turbine.getCt();
-// 	double gamma_deg = k_turbine.yaw_angle;
-// 	double gamma_rad = gamma_deg * M_PI / 180.0;
-// 	double U0 = this->wind_speed;
-// 	double p = 3.0; // Power exponent for yaw loss
-
-// 	double P0 = k_turbine.getPower() / std::pow(cos(gamma_rad), p);
-
-// 	// 5. Calculate derivatives related to yaw
-// 	double c = cos(gamma_rad);
-// 	double s = sin(gamma_rad);
-// 	double du0 = (1.0 - sqrt(1.0 - Ct * c * c));
-// 	double dv0 = 0.25 * Ct * c * c * s;
-// 	double ddu0 = -(Ct * c * s) / sqrt(1.0 - Ct * c * c);
-// 	double ddv0 = 0.25 * Ct * c * (3.0 * c * c - 2.0);
-
-// 	// 6. Calculate the gradient term from the turbine itself
-// 	// note if i is not in the target: just set to 0
-// 	double grad_k_rad = 0.0;
-
-// 	if(empty_flag_i == 0)
-// 		grad_k_rad += (3.0 * P0 / U0) * (ddu0 * du0 + ddv0 * dv0);
-
-// 	if (affected_indices.empty())
-// 		return grad_k_rad * (M_PI / 180.0);
-
-// 	// 7. Prepare data for downstream turbines
-// 	Eigen::VectorXd Xsep(affected_indices.size());
-// 	Eigen::VectorXd Ysep(affected_indices.size());
-// 	Eigen::VectorXd Zsep(affected_indices.size());
-// 	Eigen::VectorXd Fl(affected_indices.size());
-// 	Eigen::VectorXd inv2l(affected_indices.size());
-// 	Eigen::VectorXd Gl(affected_indices.size());
-// 	Eigen::VectorXd Ai(affected_indices.size());
-
-// 	// Get the indices within the y_model that correspond to the affected turbines
-// 	std::vector<int> y_model_mask_indices;
-// 	for (int i = 0; i < rot.idx_mask[kIdx_rot - 1].size(); ++i)
-// 	{
-// 		if (rot.idx_mask[kIdx_rot - 1][i] == 1)
-// 		{
-// 			y_model_mask_indices.push_back(i);
-// 		}
-// 	}
-// 	std::vector<int> gl_lookup_indices = find_indices(y_model_mask_indices, affected_indices);
-
-// 	int turbine_type_idx = 0;
-// 	if (D == 228)
-// 		turbine_type_idx = 0;
-// 	else if (D == 158)
-// 		turbine_type_idx = 1;
-// 	else
-// 		turbine_type_idx = 2;
-
-// 	for (size_t i = 0; i < affected_indices.size(); ++i)
-// 	{
-// 		int aff_idx = affected_indices[i];
-// 		const Turbine &i_turbine = this->turbine_chart[aff_idx];
-
-// 		Xsep(i) = rot.x_d[kIdx_rot - 1](aff_idx);
-// 		Ysep(i) = rot.y_d[kIdx_rot - 1](aff_idx);
-// 		Zsep(i) = rot.z_d[kIdx_rot - 1](aff_idx);
-// 		Fl(i) = rot.delta_u[kIdx_rot - 1](aff_idx);
-// 		inv2l(i) = 1.0 / rot.sigma_square[kIdx_rot - 1](aff_idx);
-
-// 		if (i < gl_lookup_indices.size())
-// 		{
-// 			Gl(i) = rot.y_model[kIdx_rot - 1][turbine_type_idx](gl_lookup_indices[i]);
-// 		}
-// 		else
-// 		{
-// 			Gl(i) = 0; // Should not happen if logic is correct
-// 		}
-
-// 		double Ui = i_turbine.getAverageVelocity();
-// 		double Pi = i_turbine.getPower();
-// 		Ai(i) = (Ui > 1e-4) ? (3.0 * Pi / Ui) : 0.0;
-// 	}
-
-// 	// 8. Calculate the influence on downstream turbines
-// 	double C0 = rot.coeff[kIdx_rot - 1];
-// 	Eigen::VectorXd Yl = Ysep.array() + dv0 * Gl.array();
-// 	Eigen::VectorXd Zl = Zsep;
-
-// 	Eigen::VectorXd El = (-(Yl.array().square() + Zl.array().square()) * inv2l.array()).exp();
-
-// 	Eigen::VectorXd termUk = -U0 * C0 * El.array() * Fl.array() *
-// 							 (ddu0 - du0 * (Yl.array() / (2.0 * inv2l.array().inverse())) * ddv0 * Gl.array());
-
-// 	// 9. Sum gradients and convert to degrees
-// 	grad_k_rad += (Ai.array() * termUk.array()).sum();
-
-// 	return grad_k_rad * (M_PI / 180.0);
-// }

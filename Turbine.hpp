@@ -64,7 +64,7 @@ public:
     double rated_power; // 额定功率
     double life_total; // 寿命
     double repair_c; // 维修成本
-    double optimization_period = 1; // 优化周期
+    double optimization_period = 30; // 优化周期
     double annual_average_power; // 年平均功率
     double past_comprehensive_fatigue_coefficient; // 过去综合疲劳系数
     double ref_turbulence = 0.1; // 参考湍流强度

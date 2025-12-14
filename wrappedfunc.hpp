@@ -44,7 +44,8 @@ bool optimizeWindFarm(
                                                    // 该vector的编号与现场风机布局图（青洲1-3风机布局图.pdf）的编号一致，vector的第i个元素对应风机布局图编号为i的风机
     std::vector<double>& opt_power_turbines,       // 输出：全场每个风机的设定功率，1x159double vector类型，单位为W 功率<1e-2(实际<50)时 风机不发电（代表发电功率为0）
     double& opt_power_farm_12,                     // 输出：青洲12总的最大可发功率，double 类型，单位为W （用于判断电网友好模式下的发电方式）
-    double& opt_power_farm_3                       // 输出：青洲3总的最大可发功率，double 类型，单位为W（用于判断电网友好模式下的发电方式）
+    double& opt_power_farm_3,                       // 输出：青洲3总的最大可发功率，double 类型，单位为W（用于判断电网友好模式下的发电方式）
+    int mode                         // 输入：优化模式选择，int 类型，0, 1, 2, 3(max/tracking)
     );
 
 /**-----------------optimizeWindFarmCheck---------------------------

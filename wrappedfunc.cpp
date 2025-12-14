@@ -5,7 +5,7 @@
 #include <cassert>
 #include <random>
 #include "omp.h"
-
+#include "unistd.h"
 #include "IpTNLP.hpp"
 #include "Farm.hpp"
 #include "rapidcsv.h"
@@ -61,10 +61,10 @@ public:
 	double g2_lwr = 0.0; // constraint 2 lower bound
 	std::vector<double> current_yaw; // current yaw angles
 	int analytic_grad_flag = 0; // flag for analytic gradient, 0 - numerical, 1 - analytic
-
+	int mode = 0; // optimization mode
 	/** default constructor */
 	MyNLP(WindFarmOptimization* farmopt_cpy, int _pthreads, 
-		const std::vector<double>& current_yaw_val, int _analytic_grad_flag);
+		const std::vector<double>& current_yaw_val, int _analytic_grad_flag, int mode_);
 	/** default destructor */
 	virtual ~MyNLP();
 
@@ -160,16 +160,21 @@ public:
 	//@}
 
 	double objPower(const Number *x); // FarmPwr(yaw_angle)
+	double objPowerLife(const Number* x); // FarmObj(yaw_angle)
 	Eigen::VectorXd gval(const Number *x, std::vector<double> &lwrbnd); // constraint values
-	double grad_f_i(const Number* x, int idx);
-	// to be implemented
+	double grad_f_i(const Number* x, int idx); // power gradient for i
+	double grad_f_obj_i(const Number* x, int idx); // objective gradient for i
 	double grad_f_i_analytic(const Number* x, int idx);
+	double grad_f_obj_i_analytic(const Number* x, int idx);
 	Eigen::VectorXd grad_f_all(const Number* x, int n, int pthreads);
+	Eigen::VectorXd grad_f_obj_all(const Number* x, int idx, int pthreads); // objective gradient
 	Eigen::VectorXd grad_g_i(const Number* x, int idx);
 	// to be implemented
 	Eigen::VectorXd grad_g_i_analytic(const Number* x, int idx);
 	Eigen::MatrixXd grad_g_all(const Number* x, int n);
 	double grad_single_analytic(const Number* x, int kIdx, 
+		const Eigen::MatrixXi& wake_matrix, int mode=0);
+	double grad_single_obj_analytic(const Number* x, int kIdx, 
 		const Eigen::MatrixXi& wake_matrix, int mode=0);
 
 private:
@@ -205,12 +210,22 @@ private:
 
 /* Constructor. */
 MyNLP::MyNLP(WindFarmOptimization* farmopt_cpy, int _pthreads, 
-	const std::vector<double>& current_yaw_val, int _analytic_grad_flag)
+	const std::vector<double>& current_yaw_val, int _analytic_grad_flag, int mode_ = 0)
 	: farmopt(farmopt_cpy), pthreads(_pthreads), current_yaw(current_yaw_val), analytic_grad_flag(_analytic_grad_flag)
 {
 	farmopt->calculateWake(); // initial wake calculation
 	g1_lwr = farmopt->getFarmQingzhou12Power();
 	g2_lwr = farmopt->getFarmQingzhou3Power();
+	this->mode = mode_;
+	if (mode_ == 1)
+		g1_lwr = 0.5*farmopt->getFarmQingzhou12Power(); // 50% of max power for tracking mode
+	else if (mode_ == 2)
+		g2_lwr = 0.5*farmopt->getFarmQingzhou3Power(); // 50% of max power for tracking mode
+	else if (mode_ == 3)
+	{
+		g1_lwr = 0.5*farmopt->getFarmQingzhou12Power(); // 50% of max power for tracking mode
+		g2_lwr = 0.5*farmopt->getFarmQingzhou3Power(); // 50% of max power for tracking mode
+	}
 	// No additional initialization required
 }
 
@@ -319,8 +334,9 @@ bool MyNLP::eval_f(
    Number&       obj_value
 )
 {
+	double T = farmopt->turbine_chart[0].optimization_period; // optimization period
 	// return the value of the objective function
-	obj_value = -objPower(const_cast<Number*>(x)); // negative for maximization
+	obj_value = -objPowerLife(const_cast<Number*>(x))*T; // negative for maximization
    	return true;
 }
 
@@ -335,7 +351,7 @@ bool MyNLP::eval_grad_f(
 	mkl_set_dynamic(0);
 	mkl_set_num_threads(2);  // set MKL threads for
    // return the gradient of the objective function grad_{x} f(x)
-    Eigen::VectorXd grad_f_vec = grad_f_all(x, n, this->pthreads);
+    Eigen::VectorXd grad_f_vec = grad_f_obj_all(x, n, this->pthreads);
 	mkl_set_dynamic(1); // reset mkl threads to default (dynamic)
     for (Index i = 0; i < n; i++) {
         grad_f[i] = grad_f_vec(i);
@@ -459,6 +475,25 @@ double MyNLP::objPower(const Number* x) {
     return total_power;
 }
 
+double MyNLP::objPowerLife(const Number* x) {
+    // convert x to vector<double>
+	std::vector<double> x_vec(MaxTurbines); // to be fixed
+    for (Index i = 0; i < MaxTurbines; i++) {
+        x_vec[i] = x[i];
+    }
+	// set yaw angles
+	farmopt->setYawAngles(x_vec);
+    double total_power = 0.0;
+    int nt = static_cast<int>(this->farmopt->layout.rows());
+    for (int i = 0; i < nt; i++) {
+		if (this->farmopt->turbine_chart[i].status == 0) {
+			continue;
+		}
+        total_power += this->farmopt->turbine_chart[i].getSingleTurbineObjective();
+    }
+    return total_power;
+}
+
 // g(x) (constriants) implementation can be added here if needed
 Eigen::VectorXd MyNLP::gval(const Number* x, std::vector<double>& lwrbnd) {
     Eigen::VectorXd g_vec(2);
@@ -502,6 +537,21 @@ double MyNLP::grad_f_i(const Number* x, int idx) {
 	return -grad_fi; // Note the negative sign for maximization
 }
 
+
+double MyNLP::grad_f_obj_i(const Number* x, int idx) {
+	// center-differencing method
+	WindFarmOptimization w = *farmopt; // make a copy to avoid modifying original
+	double yaw_org = w.turbine_chart[idx - 1].yaw_angle;
+	double h = 1; // small perturbation
+	w.turbine_chart[idx - 1].yaw_angle = yaw_org + h;
+	w.calculateWake();
+	double obj_plus = w.getFarmObj();
+	w.turbine_chart[idx - 1].yaw_angle = yaw_org - h;
+	w.calculateWake();
+	double obj_minus = w.getFarmObj();
+	double grad_fi = (obj_plus - obj_minus) / (2 * h);
+	return -grad_fi; // Note the negative sign for maximization
+}
 // analytic?
 // to be added
 
@@ -513,6 +563,13 @@ double MyNLP::grad_f_i_analytic(const Number* x, int idx){
 	return -grad_fi; // Note the negative sign for maximization
 }
 
+double MyNLP::grad_f_obj_i_analytic(const Number* x, int idx){
+	Eigen::MatrixXi wake_mat = this->farmopt->wake_matrix;
+	int mode = 0;
+	double grad_fi = grad_single_obj_analytic(x, idx, wake_mat, mode); //this->farmopt->grad_p_gamma_single(idx, wake_mat, mode);
+	return -grad_fi; // Note the negative sign for maximization
+}
+
 
 // grad_f
 Eigen::VectorXd MyNLP::grad_f_all(const Number* x, int n, int pthreads) {
@@ -520,6 +577,8 @@ Eigen::VectorXd MyNLP::grad_f_all(const Number* x, int n, int pthreads) {
 	omp_set_nested(1);  // 允许嵌套并行
 	
 	// close mkl_dynamic
+	mkl_set_dynamic(0);
+	mkl_set_num_threads(4);  // set MKL threads
 	int nt = static_cast<int>(farmopt->layout.rows());
 	// convert x to vector<double>
 	std::vector<double> yaw_angles(n); // to be fixed
@@ -544,6 +603,42 @@ Eigen::VectorXd MyNLP::grad_f_all(const Number* x, int n, int pthreads) {
 	}
 	grad_f_vec = Eigen::Map<Eigen::VectorXd>(grad_f_vector.data(), grad_f_vector.size());
 	// open mkl_dynamic
+	mkl_set_dynamic(1); // reset mkl threads to default (dynamic)
+	return grad_f_vec;
+}
+
+Eigen::VectorXd MyNLP::grad_f_obj_all(const Number* x, int idx, int pthreads) {
+	omp_set_num_threads(this->pthreads);
+	omp_set_nested(1);  // 允许嵌套并行
+	
+	// close mkl_dynamic
+	mkl_set_dynamic(0);
+	mkl_set_num_threads(4);  // set MKL threads
+	int nt = static_cast<int>(farmopt->layout.rows());
+	// convert x to vector<double>
+	std::vector<double> yaw_angles(nt); // to be fixed
+	for (Index i = 0; i < nt; i++) {
+		yaw_angles[i] = x[i];
+	}
+	farmopt->setYawAngles(yaw_angles);
+	Eigen::VectorXd grad_f_vec(nt);
+	// compute grad_f for each turbine, idx is 1-based
+	// parallel computation to be implemented later
+	std::vector<double> grad_f_vector(nt);
+	#pragma omp parallel for
+		for (int i = 0; i < nt; i++) {
+			if (farmopt->turbine_chart[i].status == 0) {
+				grad_f_vector[i] = 0.0;
+				continue;
+			}
+			if (analytic_grad_flag == 0)
+				grad_f_vector[i] = grad_f_obj_i(x, i + 1); // idx is 1-based
+			else
+				grad_f_vector[i] = grad_f_obj_i_analytic(x, i + 1); // idx is 1-based
+	}
+	grad_f_vec = Eigen::Map<Eigen::VectorXd>(grad_f_vector.data(), grad_f_vector.size());
+	// open mkl_dynamic
+	mkl_set_dynamic(1); // reset mkl threads to default (dynamic)
 	return grad_f_vec;
 }
 
@@ -581,22 +676,14 @@ Eigen::VectorXd MyNLP::grad_g_i(const Number* x, int idx) {
 	return -(g_plus - g_minus) / (2 * h); // Note the negative sign for maximization
 }
 
-// Eigen::VectorXd MyNLP::grad_g_i_analytic(const Number* x, int idx) {
-// 	// to be implemented
-// 	Eigen::VectorXd grad_gi(2);
-// 	grad_gi.setZero();
-// 	int mode = 1; // constraint mode
-// 	grad_gi(0) = this->farmopt->grad_p_gamma_single(idx, this->farmopt->wake_matrix, mode); // Farm12
-// 	mode = 2;
-// 	grad_gi(1) = this->farmopt->grad_p_gamma_single(idx, this->farmopt->wake_matrix, mode); // Farm3
-// 	grad_gi = -grad_gi; // Note the negative sign for maximization
-// 	return grad_gi;
-// }
-
 // grad_g
 Eigen::MatrixXd MyNLP::grad_g_all(const Number* x, int n) {
 	omp_set_num_threads(this->pthreads);
 	omp_set_nested(1);  // 允许嵌套并行
+	// close dynamic mkl
+	mkl_set_dynamic(0);
+	mkl_set_num_threads(2);  // set MKL threads
+	// convert x to vector<double>
 	std::vector<double> yaw_angles(n); // to be fixed
 	for (Index i = 0; i < n; i++) {
 		yaw_angles[i] = x[i];
@@ -617,6 +704,8 @@ Eigen::MatrixXd MyNLP::grad_g_all(const Number* x, int n) {
 		// grad_gi_row(1) = 0, grad_gi_row(2) = 0; // to be fixed
 		grad_g_mat.row(i) = grad_gi_row; // idx is 1-based
 	}
+	// open dynamic mkl
+	mkl_set_dynamic(1); // reset mkl threads to default (dynamic)
 	return grad_g_mat;
 }
 
@@ -772,8 +861,184 @@ double MyNLP::grad_single_analytic(const Number* x, int kIdx,
 	// 9. Sum gradients and convert to degrees
 	grad_k_rad += (Ai.array() * termUk.array()).sum();
 
-	return -grad_k_rad * (M_PI / 180.0);
+	return grad_k_rad * (M_PI / 180.0);
 }
+
+
+double MyNLP::grad_single_obj_analytic(const Number* x, int kIdx, 
+	const Eigen::MatrixXi& wake_matrix, int mode)
+{
+		// 1. Prepare static cache if not already done
+	if (!(farmopt->cache_stored))
+	{
+		farmopt->rotated_result_cache = farmopt->prepareStaticCache();
+	}
+	const RotatedResult &rot = farmopt->rotated_result_cache;
+
+	// 2. Find turbines affected by kIdx
+	// if mode = 0: pick all affected idx
+	// if mode = 1: pick idx in qz_12 only
+	// if mode = 2: pick idx in qz_3 only
+
+	// set two flags to show whether kIdx or affected_idx is empty according to the target mode
+	int empty_flag_i = 0;
+	int empty_flag_affected_idx = 0;
+
+	// hard-coded judgement for kIdx
+	if (kIdx < 92 && mode == 2)
+		empty_flag_i = 1;
+	else if (kIdx >= 92 && mode == 1)
+		empty_flag_i = 1;
+
+	std::vector<int> affected_indices;
+	for (int i = 0; i < wake_matrix.cols(); ++i)
+	{
+		if (wake_matrix(kIdx - 1, i) == 1)
+		{
+			if(mode == 0)
+				affected_indices.push_back(i);
+			else if(mode == 1)
+			{
+				// check if i in qz_12
+				if (std::find(farmopt->qz_12.begin(), farmopt->qz_12.end(), i + 1) != farmopt->qz_12.end()) // i+1 for 1-based
+					affected_indices.push_back(i);
+			}
+			else if(mode == 2)
+			{
+				// check if i in qz_3
+				if (std::find(farmopt->qz_3.begin(), farmopt->qz_3.end(), i + 1) != farmopt->qz_3.end()) // i+1 for 1-based
+					affected_indices.push_back(i);
+			}
+		}
+	}
+
+	// 3. Map original kIdx to its sorted position
+	auto it_k = std::find(rot.sorted_indexes.begin(), rot.sorted_indexes.end(), kIdx); // find kidx in 1 to 159
+	if (it_k == rot.sorted_indexes.end())
+	{
+		// Handle error: kIdx not found in sorted indices
+		return -1;
+	}
+	int kIdx_rot = std::distance(rot.sorted_indexes.begin(), it_k) + 1; // get kIdx_rot from ptr (also 1 based)
+
+	// 4. Get parameters for the current turbine (k)
+	const Turbine &k_turbine = farmopt->turbine_chart[kIdx_rot - 1]; // new kIdx is idx in rotated_turb_chart
+	double D = k_turbine.rotor_diameter;
+	double Ct = k_turbine.getCt();
+	double gamma_deg = k_turbine.yaw_angle;
+	double gamma_rad = gamma_deg * M_PI / 180.0;
+	double U0 = farmopt->wind_speed;
+	double p = 3.0; // Power exponent for yaw loss
+
+	double P0 = k_turbine.getPower() / std::pow(cos(gamma_rad), p);
+
+	// 5. Calculate derivatives related to yaw
+	double c = cos(gamma_rad);
+	double s = sin(gamma_rad);
+	double du0 = (1.0 - sqrt(1.0 - Ct * c * c));
+	double dv0 = 0.25 * Ct * c * c * s;
+	double ddu0 = -(Ct * c * s) / sqrt(1.0 - Ct * c * c);
+	double ddv0 = 0.25 * Ct * c * (3.0 * c * c - 2.0);
+
+	// 6. Calculate the gradient term from the turbine itself
+	// note if i is not in the target: just set to 0
+	double grad_k_rad = 0.0;
+
+	if(empty_flag_i == 0)
+		grad_k_rad += (3.0 * P0 / U0) * (ddu0 * du0 + ddv0 * dv0);
+
+	if (affected_indices.empty())
+		return grad_k_rad * (M_PI / 180.0);
+
+	// 7. Prepare data for downstream turbines
+	Eigen::VectorXd Xsep(affected_indices.size());
+	Eigen::VectorXd Ysep(affected_indices.size());
+	Eigen::VectorXd Zsep(affected_indices.size());
+	Eigen::VectorXd Fl(affected_indices.size());
+	Eigen::VectorXd inv2l(affected_indices.size());
+	Eigen::VectorXd Gl(affected_indices.size());
+	Eigen::VectorXd Ai(affected_indices.size());
+	// added life terms
+	Eigen::VectorXd pavg_vector(affected_indices.size());
+    // Eigen::VectorXd life_turbulence_c(affected_indices.size());
+    Eigen::VectorXd life_work_c(affected_indices.size());
+
+	// Get the indices within the y_model that correspond to the affected turbines
+	std::vector<int> y_model_mask_indices;
+	for (int i = 0; i < rot.idx_mask[kIdx_rot - 1].size(); ++i)
+	{
+		if (rot.idx_mask[kIdx_rot - 1][i] == 1)
+		{
+			y_model_mask_indices.push_back(i);
+		}
+	}
+	std::vector<int> gl_lookup_indices = find_indices(y_model_mask_indices, affected_indices);
+
+	int turbine_type_idx = 0;
+	if (D == 228)
+		turbine_type_idx = 0;
+	else if (D == 158)
+		turbine_type_idx = 1;
+	else
+		turbine_type_idx = 2;
+
+	for (size_t i = 0; i < affected_indices.size(); ++i)
+	{
+		int aff_idx = affected_indices[i];
+		const Turbine &i_turbine = farmopt->turbine_chart[aff_idx];
+
+		Xsep(i) = rot.x_d[kIdx_rot - 1](aff_idx);
+		Ysep(i) = rot.y_d[kIdx_rot - 1](aff_idx);
+		Zsep(i) = rot.z_d[kIdx_rot - 1](aff_idx);
+		Fl(i) = rot.delta_u[kIdx_rot - 1](aff_idx);
+		inv2l(i) = 1.0 / rot.sigma_square[kIdx_rot - 1](aff_idx);
+
+		if (i < gl_lookup_indices.size())
+		{
+			Gl(i) = rot.y_model[kIdx_rot - 1][turbine_type_idx](gl_lookup_indices[i]);
+		}
+		else
+		{
+			Gl(i) = 0; // Should not happen if logic is correct
+		}
+
+		double Ui = i_turbine.getAverageVelocity();
+		double Pi = i_turbine.getPower();
+		Ai(i) = (Ui > 1e-4) ? (3.0 * Pi / Ui) : 0.0;
+		pavg_vector(i) = i_turbine.annual_average_power;
+        // life_turbulence_c(i) = i_turbine.life_turbulence_coeff;
+        life_work_c(i) = i_turbine.life_work_coeff;
+	}
+
+	// 8. Calculate the influence on downstream turbines
+	double C0 = rot.coeff[kIdx_rot - 1];
+	Eigen::VectorXd Yl = Ysep.array() + dv0 * Gl.array();
+	Eigen::VectorXd Zl = Zsep;
+
+	Eigen::VectorXd El = (-(Yl.array().square() + Zl.array().square()) * inv2l.array()).exp();
+
+	Eigen::VectorXd termUk = -U0 * C0 * El.array() * Fl.array() *
+							 (ddu0 - du0 * (Yl.array() / (2.0 * inv2l.array().inverse())) * ddv0 * Gl.array());
+
+	// 9. Sum gradients and convert to degrees
+	grad_k_rad += (Ai.array() * termUk.array()).sum();
+
+	// 10. compute life term gradient
+	double T = farmopt->turbine_chart[kIdx_rot - 1].optimization_period;
+
+    // --- Work life gradient ---
+    double pavg_k = k_turbine.annual_average_power;
+    double life_work_k = k_turbine.life_work_coeff;
+    double grad_k_power_only = -p * (P0 / std::pow(c, p)) * (p * std::pow(c, p - 1) * (-s)); // d(P_k)/d(gamma_k)
+    double life_work_grad_k = -T * (
+        pavg_k * life_work_k * grad_k_power_only +
+        (pavg_vector.array() * life_work_c.array() * Ai.array() * termUk.array()).sum()
+    );
+	grad_k_rad = T * grad_k_rad;
+	grad_k_rad += life_work_grad_k;
+	return grad_k_rad * (M_PI / 180.0);
+}
+
 
 /**** Custom Function*****/
 
@@ -883,8 +1148,8 @@ bool optimizeWindFarm(
 	std::vector<double>& opt_yaw_angles, // 输出：各风机偏航角度，对应风机编号见 文件wind farm layout
 	std::vector<double>& opt_power_turbines,   // 输出：全场功率
     double& opt_power_farm_12, // 输出：青州12功率
-    double& opt_power_farm_3 // 输出：青州3功率
-	)
+    double& opt_power_farm_3, // 输出：青州3功率
+	int mode = 0) // 输入：优化模式，0-全场，1-青州12，2-青州3)
 	{
 		if (!g_farmopt) {
 		std::cerr << "WindFarm not initialized!" << std::endl;
@@ -899,8 +1164,24 @@ bool optimizeWindFarm(
 	g_farmopt->wind_speed = mwind_speed[0];
 	g_farmopt->wind_direction = mwind_direction[0];
 	g_farmopt->setYawAngles(init_yaw_angles); // set initial yaw angles from the actual input
-	g_farmopt->calculateWake();
-	std::cout << "Wind Farm Power: " << g_farmopt->getFarmPower() << " W" << std::endl;
+	g_farmopt->calculateWake(); // calculate initial wake
+	sleep(2); // wait for 2 seconds to ensure wake calculation is done
+	double qingzhou12_pwr = g_farmopt->getFarmQingzhou12Power();
+	double qingzhou3_pwr = g_farmopt->getFarmQingzhou3Power();
+	if (mode == 1){
+		qingzhou12_pwr *= 0.5;
+	}
+	else if (mode == 2){
+		qingzhou3_pwr *= 0.5;
+	}
+	else if (mode == 3){
+		qingzhou12_pwr *= 0.5;
+		qingzhou3_pwr *= 0.5;
+	}
+	// 返回单位MW并有两位小数
+	qingzhou12_pwr = std::round(qingzhou12_pwr / 1e6 * 100) / 100.0;
+	qingzhou3_pwr = std::round(qingzhou3_pwr / 1e6 * 100) / 100.0;
+	std::cout << "青州12AGC指令: " << qingzhou12_pwr << "MW， 青州3AGC指令: " << qingzhou3_pwr << "MW" << std::endl;
 
 	// test grad_f function in mynlp
 
@@ -915,6 +1196,16 @@ bool optimizeWindFarm(
 	double ws0 = 0.0, ws1 = 0.0;
 	int i = 0, j = 0; // save indices
 	for (i = 0; i < wind_direction_tbl.size() - 1; i++) {
+		if (wd < wind_direction_tbl[0]) {
+			wd0 = wd;
+			wd1 = wind_direction_tbl[1];
+			break;
+		}
+		else if (wd > wind_direction_tbl[wind_direction_tbl.size() - 1]) {
+			wd0 = wind_direction_tbl[wind_direction_tbl.size() - 1];
+			wd1 = wd;
+			break;
+		}
 		if (wd >= wind_direction_tbl[i] && wd <= wind_direction_tbl[i + 1]) {
 			wd0 = wind_direction_tbl[i];
 			wd1 = wind_direction_tbl[i + 1];
@@ -922,33 +1213,52 @@ bool optimizeWindFarm(
 		}
 	}
 	for (j = 0; j < wind_speed_tbl.size() - 1; j++) {
+		if (ws < wind_speed_tbl[0]) {
+			ws0 = ws;
+			ws1 = wind_speed_tbl[1];
+			break;
+		}
+		else if (ws > wind_speed_tbl[wind_speed_tbl.size() - 1]) {
+			ws0 = wind_speed_tbl[wind_speed_tbl.size() - 2];
+			ws1 = ws;
+			break;
+		}
 		if (ws >= wind_speed_tbl[j] && ws <= wind_speed_tbl[j + 1]) {
 			ws0 = wind_speed_tbl[j];
 			ws1 = wind_speed_tbl[j + 1];
 			break;
 		}
 	}
+	// if the wd/ws out of the bound, just set to original
+	if (wd < wind_direction_tbl[0] || wd > wind_direction_tbl[wind_direction_tbl.size() - 1] ||
+		ws < wind_speed_tbl[0] || ws > wind_speed_tbl[wind_speed_tbl.size() - 1]) {
+		// set initial yaw directly	
+		g_farmopt->setYawAngles(std::vector<double>(MaxTurbines, 5.0));
+	}
+	else{
+		// get yaw angles at the four corners
+		std::string yaw_angle_str_ij = g_csv_doc->GetCell<std::string>(24, j*wind_direction_tbl.size() + i); // row 11 (yaw), col based on ws, wd indices
+		std::string yaw_angle_str_i1j = g_csv_doc->GetCell<std::string>(24, j*wind_direction_tbl.size() + (i + 1));
+		std::string yaw_angle_str_ij1 = g_csv_doc->GetCell<std::string>(24, (j + 1)*wind_direction_tbl.size() + i);
+		std::string yaw_angle_str_i1j1 = g_csv_doc->GetCell<std::string>(24, (j + 1)*wind_direction_tbl.size() + (i + 1));
+		// use bilinear interpolation to get init yaw for each turbine
+		// convert string to vec
+		Eigen::VectorXd yaw_angle_ij = stringToVectorXd(yaw_angle_str_ij);
+		Eigen::VectorXd yaw_angle_i1j = stringToVectorXd(yaw_angle_str_i1j);
+		Eigen::VectorXd yaw_angle_ij1 = stringToVectorXd(yaw_angle_str_ij1);
+		Eigen::VectorXd yaw_angle_i1j1 = stringToVectorXd(yaw_angle_str_i1j1);
+		// bilinear interpolation for new init yaw
+		Eigen::VectorXd yaw_angle_interp2d = bilinearInterpolation<Eigen::VectorXd>(
+			wd, ws,
+			wd0, ws0, wd1, ws1,
+			yaw_angle_ij, yaw_angle_i1j,
+			yaw_angle_ij1, yaw_angle_i1j1
+		);
 
-	std::string yaw_angle_str_ij = g_csv_doc->GetCell<std::string>(24, j*wind_direction_tbl.size() + i); // row 11 (yaw), col based on ws, wd indices
-	std::string yaw_angle_str_i1j = g_csv_doc->GetCell<std::string>(24, j*wind_direction_tbl.size() + (i + 1));
-	std::string yaw_angle_str_ij1 = g_csv_doc->GetCell<std::string>(24, (j + 1)*wind_direction_tbl.size() + i);
-	std::string yaw_angle_str_i1j1 = g_csv_doc->GetCell<std::string>(24, (j + 1)*wind_direction_tbl.size() + (i + 1));
-	// use bilinear interpolation to get init yaw for each turbine
-	// convert string to vec
-	Eigen::VectorXd yaw_angle_ij = stringToVectorXd(yaw_angle_str_ij);
-	Eigen::VectorXd yaw_angle_i1j = stringToVectorXd(yaw_angle_str_i1j);
-	Eigen::VectorXd yaw_angle_ij1 = stringToVectorXd(yaw_angle_str_ij1);
-	Eigen::VectorXd yaw_angle_i1j1 = stringToVectorXd(yaw_angle_str_i1j1);
-	// bilinear interpolation for new init yaw
-	Eigen::VectorXd yaw_angle_interp2d = bilinearInterpolation<Eigen::VectorXd>(
-		wd, ws,
-		wd0, ws0, wd1, ws1,
-		yaw_angle_ij, yaw_angle_i1j,
-		yaw_angle_ij1, yaw_angle_i1j1
-	);
-
-	std::vector<double> yaw_vec_interp2d(yaw_angle_interp2d.data(), yaw_angle_interp2d.data() + yaw_angle_interp2d.size());
-	g_farmopt->setYawAngles(yaw_vec_interp2d); // set initial yaw angles from the bilinear interpolation
+		std::vector<double> yaw_vec_interp2d(yaw_angle_interp2d.data(), yaw_angle_interp2d.data() + yaw_angle_interp2d.size());
+		g_farmopt->setYawAngles(yaw_vec_interp2d); // set initial yaw angles from the bilinear interpolation
+	}
+	
 	// limit the interpolation in the limit
 	for (size_t k = 0; k < MaxTurbines; k++) {
 		double baseline_yaw = g_farmopt->turbine_chart[k].yaw_angle;
@@ -968,8 +1278,8 @@ bool optimizeWindFarm(
 	g_farmopt->calculate_wake_matrix(); // recalculate wake matrix after status update
 	
 	try {
-		int pthreads_ = 16;
-		SmartPtr<TNLP> mynlp = new MyNLP(g_farmopt, pthreads_, init_yaw_angles, analytic_grad_flag);
+		int pthreads_ = 32;
+		SmartPtr<TNLP> mynlp = new MyNLP(g_farmopt, pthreads_, init_yaw_angles, analytic_grad_flag, mode);
 		SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
 		ApplicationReturnStatus status = app->Initialize();
 		if (status != Solve_Succeeded) {
@@ -984,15 +1294,15 @@ bool optimizeWindFarm(
 		app->Options()->SetStringValue("linear_system_scaling", "none");
 		app->Options()->SetStringValue("output_file", "ipopt_out.txt");
 		app->Options()->SetStringValue("hessian_approximation", "limited-memory");
-		app->Options()->SetIntegerValue("max_iter", 2);
+		app->Options()->SetIntegerValue("max_iter", 3);
 		app->Options()->SetStringValue("sb", "yes"); // get rid of IPOPT banner
 
 		status = app->OptimizeTNLP(mynlp);
 
 		if (status == Solve_Succeeded || status == Maximum_Iterations_Exceeded) {
 			Index iter_count = app->Statistics()->IterationCount();
-			std::cout << "*** Problem solved in " << iter_count << " iterations!" << std::endl;
-
+			// std::cout << "*** 优化完成，总计 " << iter_count << " 次迭代" << std::endl;
+			// std::cout << "Wind Farm Power: " << g_farmopt->getFarmPower() << " W" << std::endl;
 			// Number final_obj = app->Statistics()->FinalObjective();
 			// std::cout << "*** Final objective value: " << final_obj << std::endl;
 			Eigen::VectorXd yaw_eigen_new = g_farmopt->getYawAngles();
@@ -1006,7 +1316,7 @@ bool optimizeWindFarm(
 			return true;
 		}
 		else {
-			std::cout << "*** Optimization failed with status: " << status << std::endl;
+			std::cout << "*** 优化失败，状态码: " << status << std::endl;
 			return false;
 		}
 	}
@@ -1335,7 +1645,7 @@ T bilinearInterpolation(double x, double y,
                         const T& k00, const T& k10, const T& k01, const T& k11) {
     double t = (x - x0) / (x1 - x0);
     double u = (y - y0) / (y1 - y0);
-
+	
     return (1 - t) * (1 - u) * k00
          + t * (1 - u) * k10
          + (1 - t) * u * k01

@@ -1,7 +1,7 @@
 # This cmake is for building algorithm test example, not for package distribution
 cmake_minimum_required(VERSION 3.20)
 project(wfoptim)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-O3" )
 # local include directories
 # Eigen include

@@ -131,6 +131,9 @@ public:
     // 获取所有风机功率
     Eigen::VectorXd getTurbinesPower() const;
 
+    // 获取所有风机复合优化目标
+    Eigen::VectorXd getTurbinesObj() const;
+
     // 获取所有风机湍流
     Eigen::VectorXd getTurbinesTurbulence() const;
 
