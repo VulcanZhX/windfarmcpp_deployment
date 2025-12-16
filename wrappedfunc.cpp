@@ -62,6 +62,12 @@ public:
 	std::vector<double> current_yaw; // current yaw angles
 	int analytic_grad_flag = 0; // flag for analytic gradient, 0 - numerical, 1 - analytic
 	int mode = 0; // optimization mode
+
+	// mapping table reducing num of variables to omit isolated turbine
+	std::vector<int> mapping_table_connected;
+	// grouping table to show all connected components
+	std::vector<std::vector<int>> connected_turbine_groups;
+
 	/** default constructor */
 	MyNLP(WindFarmOptimization* farmopt_cpy, int _pthreads, 
 		const std::vector<double>& current_yaw_val, int _analytic_grad_flag, int mode_);
@@ -1040,7 +1046,213 @@ double MyNLP::grad_single_obj_analytic(const Number* x, int kIdx,
 }
 
 
-/**** Custom Function*****/
+/***** Neighbor optimization miniNLP class *****/
+class miniNLP : public TNLP {
+	//params
+	int pthreads = 8; // number of threads for parallel computing
+	double g1_lwr = 0.0; // constraint 1 lower bound
+	double g2_lwr = 0.0; // constraint 2 lower bound
+	std::vector<double> current_yaw; // current yaw angles
+	int index = 1; // index of the turbine being optimized
+	int analytic_grad_flag = 0; // flag for analytic gradient, 0 - numerical, 1 - analytic
+	// int mode = 0; // optimization mode
+
+	// methods
+	/** default constructor */
+	miniNLP(WindFarmOptimization* farmopt_cpy, int _pthreads, 
+		const std::vector<double>& current_yaw_val, int _index, int _analytic_grad_flag);
+	/** default destructor */
+	virtual ~miniNLP();
+
+	/** windfarm class to be optimized*/
+	WindFarmOptimization* farmopt;
+	/**@name Overloaded from TNLP */
+	//@{
+	/** Method to return some info about the nlp */
+	virtual bool get_nlp_info(
+		Index& n,
+		Index& m,
+		Index& nnz_jac_g,
+		Index& nnz_h_lag,
+		IndexStyleEnum& index_style
+	);
+
+	/** Method to return the bounds for my problem */
+	virtual bool get_bounds_info(
+		Index   n,
+		Number* x_l,
+		Number* x_u,
+		Index   m,
+		Number* g_l,
+		Number* g_u
+	);
+
+	/** Method to return the starting point for the algorithm */
+	virtual bool get_starting_point(
+		Index   n,
+		bool    init_x,
+		Number* x,
+		bool    init_z,
+		Number* z_L,
+		Number* z_U,
+		Index   m,
+		bool    init_lambda,
+		Number* lambda
+	);
+
+	/** Method to return the objective value */
+	virtual bool eval_f(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Number& obj_value
+	);
+
+	/** Method to return the gradient of the objective */
+	virtual bool eval_grad_f(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Number* grad_f
+	);
+
+	/** Method to return the constraint residuals */
+	virtual bool eval_g(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Index         m,
+		Number* g
+	);
+
+	/** Method to return:
+	 *   1) The structure of the Jacobian (if "values" is NULL)
+	 *   2) The values of the Jacobian (if "values" is not NULL)
+	 */
+	virtual bool eval_jac_g(
+		Index         n,
+		const Number* x,
+		bool          new_x,
+		Index         m,
+		Index         nele_jac,
+		Index* iRow,
+		Index* jCol,
+		Number* values
+	);
+
+	 /** This method is called when the algorithm is complete so the TNLP can store/write the solution */
+	virtual void finalize_solution(
+		SolverReturn status,
+		Index n,
+		const Number *x,
+		const Number *z_L,
+		const Number *z_U,
+		Index m,
+		const Number *g,
+		const Number *lambda,
+		Number obj_value,
+		const IpoptData *ip_data, IpoptCalculatedQuantities *ip_cq
+	);
+};
+
+
+/**** miniNLP Implementation ****/
+
+miniNLP::miniNLP(WindFarmOptimization* farmopt_cpy, int _pthreads, 
+	const std::vector<double>& current_yaw_val, int _index, int _analytic_grad_flag)
+	: farmopt(farmopt_cpy), pthreads(_pthreads), current_yaw(current_yaw_val), 
+	index(_index), analytic_grad_flag(_analytic_grad_flag)
+{
+	farmopt->calculateWake(); // initial wake calculation
+	g1_lwr = farmopt->getFarmQingzhou12Power();
+	g2_lwr = farmopt->getFarmQingzhou3Power();
+}
+
+bool miniNLP::get_nlp_info(
+	Index& n,
+	Index& m,
+	Index& nnz_jac_g,
+	Index& nnz_h_lag,
+	IndexStyleEnum& index_style
+) {
+	n = 1; // only one variable: yaw angle of the selected turbine
+	m = 2; // two constraints: power in qz_12 and qz_3
+
+	nnz_jac_g = 2; // each constraint depends on the single variable
+	nnz_h_lag = 0; // not providing Hessian
+
+	index_style = TNLP::C_STYLE; // use C-style indexing (0-based)
+
+	return true;
+}
+
+bool miniNLP::get_bounds_info(
+	Index   n,
+	Number* x_l,
+	Number* x_u,
+	Index   m,
+	Number* g_l,
+	Number* g_u
+) {
+	// variable bounds
+	x_l[0] = -30.0; // yaw angle lower bound
+	x_u[0] = 30.0;  // yaw angle upper bound
+
+	// constraint bounds
+	g_l[0] = g1_lwr; // power in qz_12 lower bound
+	g_u[0] = 1e19;   // no upper bound
+
+	g_l[1] = g2_lwr; // power in qz_3 lower bound
+	g_u[1] = 1e19;   // no upper bound
+
+	return true;
+}
+
+bool miniNLP::get_starting_point(
+	Index   n,
+	bool    init_x,
+	Number* x,
+	bool    init_z,
+	Number* z_L,
+	Number* z_U,
+	Index   m,
+	bool    init_lambda,
+	Number* lambda
+) {
+	// set the starting point for the variable
+	if (init_x) {
+		x[0] = current_yaw[index - 1]; // index is 1-based
+	}
+
+	// no dual variables or multipliers to initialize
+	return true;
+}
+
+bool miniNLP::eval_f(
+	Index         n,
+	const Number* x,
+	bool          new_x,
+	Number& obj_value
+) {
+	// set the yaw angle of the selected turbine
+	std::vector<double> yaw_angles = current_yaw;
+	yaw_angles[index - 1] = x[0]; // index is 1-based
+	farmopt->setYawAngles(yaw_angles);
+	farmopt->calculateWake();
+
+	// compute objective: total power
+	double total_power = 0.0;
+	for (const auto& turbine : farmopt->turbine_chart) {
+		total_power += turbine.getPower();
+	}
+	obj_value = -total_power; // negative for maximization
+
+	return true;
+}
+
+
+
+/**** Custom Function ****/
 
 // Initialization function
 bool initializeWindFarm() {

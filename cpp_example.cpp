@@ -21,8 +21,8 @@ int main(int argc, char **argv)
 	// initialize windfarm only once
 	initializeWindFarm();
 	// update windfarm and perform optimization
-	std::vector<double> new_wind_speed(5, 9.25);
-	std::vector<double> new_wind_direction(5, 300.0);
+	std::vector<double> new_wind_speed(5, 10);
+	std::vector<double> new_wind_direction(5, 120);
 	std::vector<std::vector<double>> init_yaw_angles = generateRandomPT(1, 159, -15, 15); // all set to 0.0 for testing
 	std::vector<double> current_yaw_angles_vec = init_yaw_angles[0];
 	std::vector<double> new_yaw_angles(159, 0.0);
@@ -64,6 +64,27 @@ int main(int argc, char **argv)
             components.push_back(comp);
         }
     }
+
+	// // 合并部分连通分量（分量顶点数不大于2），移动到component结尾处
+	// std::vector<int> combined_isolated_components;
+	// std::vector<int> small_component_indices; // record them for eraseing
+	// combined_isolated_components.reserve(40);
+	// for (int i = 0; i < (int)components.size(); i++){
+	// 	if(components[i].size() <= 2){
+	// 		combined_isolated_components.insert(
+    //             combined_isolated_components.end(),
+    //             components[i].begin(),
+    //             components[i].end()
+    //         );
+	// 		small_component_indices.push_back(i);
+	// 	}
+	// }
+	// for (auto it = small_component_indices.rbegin(); it != small_component_indices.rend(); ++it) {
+    //     components.erase(components.begin() + *it);
+    // }
+    // if (!combined_isolated_components.empty()) {
+    //     components.push_back(std::move(combined_isolated_components));
+    // }
 
     // 输出结果
     std::cout << "Number of connected components: " << components.size() << "\n";

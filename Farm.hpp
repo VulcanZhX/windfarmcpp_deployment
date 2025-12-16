@@ -87,6 +87,8 @@ public:
     std::vector<int> status_all; // 所有风机状态数组
                                  // Wake matrix 储存
     Eigen::MatrixXi wake_matrix; // 风机尾流影响矩阵， from row to col. 1 is affecting, 0 is not
+    std::vector<std::vector<int>> inflow_turbine_idxs; // 入流风机索引
+	std::vector<std::vector<int>> outflow_turbine_idxs; // 出流风机索引
 
     // 构造函数
     WindFarmOptimization(

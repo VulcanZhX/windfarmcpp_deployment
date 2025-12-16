@@ -488,6 +488,23 @@ MatrixXi WindFarmOptimization::calculate_wake_matrix()
 		u_wake = combination_function(u_wake, turb_u_wake);
 	}
 	this->wake_matrix = wake_matrix;
+	// extract inflow and outflow vector from wake_matrix
+	inflow_turbine_idxs.clear();
+	outflow_turbine_idxs.clear();
+	for (int i = 0; i < n_turbines; i++)
+	{
+		std::vector<int> inflow_i;
+		std::vector<int> outflow_i;
+		for (int j = 0; j < n_turbines; j++)
+		{
+			if (wake_matrix(j, i) == 1)
+				inflow_i.push_back(j);
+			if (wake_matrix(i, j) == 1)
+				outflow_i.push_back(j);
+		}
+		inflow_turbine_idxs.push_back(inflow_i);
+		outflow_turbine_idxs.push_back(outflow_i);
+	}
 	return wake_matrix;
 }
 
