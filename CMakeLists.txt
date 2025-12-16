@@ -6,10 +6,13 @@ set(CMAKE_CXX_FLAGS "-O3" )
 # local include directories
 # Eigen include
 set(CMAKE_BUILD_PARALLEL_LEVEL 8)
+# supress Wunused_result warning
+add_compile_options(-Wno-unused-result)
+
+
 include_directories(/usr/include/eigen3/Eigen)
 # MKL include
 include_directories(/home/legion/code_space_mkl/mkl/mkl/latest/include)
-
 include_directories(${CMAKE_SOURCE_DIR}/include/coin-or)
 
 # link_directories(

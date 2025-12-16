@@ -3,6 +3,7 @@
 #include "IpSolveStatistics.hpp"
 #include <IpOptionsList.hpp>
 #include <cassert>
+#include <chrono>
 #include <random>
 #include "omp.h"
 #include "unistd.h"
@@ -10,8 +11,11 @@
 #include "Farm.hpp"
 #include "rapidcsv.h"
 
+// global resource handles
+
 WindFarmOptimization* g_farmopt = nullptr;
 rapidcsv::Document* g_csv_doc = nullptr;
+std::ofstream log_hdl; // global log file handle
 
 // 全局表格数据：风向-风速-偏航角
 
@@ -1113,6 +1117,24 @@ bool initializeWindFarm() {
 				serial_coeff_all_val, status_all_val,
 				XYZ, wind_speed, wind_direction);
 			
+
+			// create loginfo folder in src if not exists
+			std::string log_folder = "../loginfo";
+			std::string mkdir_cmd = "mkdir -p " + log_folder;
+			system(mkdir_cmd.c_str());
+			// create log file for debugging
+			// set log file name using current date and time
+			std::string log_filename = "optlog";
+			// concatenate date time to log filename
+			// change to yy-hh-dd-hh:mm:ss format
+			auto logstart_datetime = 
+				std::chrono::system_clock::to_time_t(std::chrono::system_clock::now() + std::chrono::hours(8));
+            std::tm* logstart_tm = std::localtime(&logstart_datetime);
+            std::ostringstream datetime_ss;
+            datetime_ss << std::put_time(logstart_tm, "%y-%m-%d-%H:%M:%S");
+			log_filename = log_folder + "/" + "optlog_" + datetime_ss.str() + ".log";
+            // create global file handle 
+            log_hdl = std::ofstream(log_filename, std::ios::app);
 			return true;
 			
 		}
@@ -1277,6 +1299,10 @@ bool optimizeWindFarm(
 	g_farmopt->calculateWake(); // recalculate wake after status update
 	g_farmopt->calculate_wake_matrix(); // recalculate wake matrix after status update
 	
+	// log params and time to file
+	// get current time
+	auto log_start_time = std::chrono::high_resolution_clock::now();
+	auto log_start_datetime = std::chrono::system_clock::to_time_t(log_start_time);
 	try {
 		int pthreads_ = 32;
 		SmartPtr<TNLP> mynlp = new MyNLP(g_farmopt, pthreads_, init_yaw_angles, analytic_grad_flag, mode);
@@ -1300,6 +1326,10 @@ bool optimizeWindFarm(
 		status = app->OptimizeTNLP(mynlp);
 
 		if (status == Solve_Succeeded || status == Maximum_Iterations_Exceeded) {
+			// log end time
+			auto log_end_time = std::chrono::high_resolution_clock::now();
+			auto log_end_datetime = std::chrono::system_clock::to_time_t(log_end_time);
+			std::chrono::duration<double> elapsed_time = log_end_time - log_start_time;
 			Index iter_count = app->Statistics()->IterationCount();
 			// std::cout << "*** 优化完成，总计 " << iter_count << " 次迭代" << std::endl;
 			// std::cout << "Wind Farm Power: " << g_farmopt->getFarmPower() << " W" << std::endl;
@@ -1313,6 +1343,21 @@ bool optimizeWindFarm(
 
 			Eigen::VectorXd opt_power_all_eigen = g_farmopt->getTurbinesPower();
 			opt_power_turbines = std::vector<double>(opt_power_all_eigen.data(), opt_power_all_eigen.data() + opt_power_all_eigen.size());
+			double opt_power_farm_all = g_farmopt->getFarmPower();
+			// logger section
+			// log time and opt power12/3/all to optlog.txt
+
+			log_hdl << "----------------------------------------" << std::endl;
+			// log start time (as date format yy-mm-dd-hh-mm-ss)
+			log_hdl << "Optimization Start Time: " << std::put_time(std::localtime(&log_start_datetime), "%Y-%m-%d %H:%M:%S") << std::endl;
+			log_hdl << "Optimization Iterations: " << iter_count << ", ";
+			log_hdl << "Optimization Time: " << elapsed_time.count() << " seconds, ";
+			log_hdl << "Qingzhou12 Power: " << opt_power_farm_12 << " W, ";
+			log_hdl << "Qingzhou3 Power: " << opt_power_farm_3 << " W, ";
+			log_hdl << "Total Farm Power: " << opt_power_farm_all << " W" << std::endl;
+			// log end time (same format)
+			log_hdl << "Optimization End Time: " << std::put_time(std::localtime(&log_end_datetime), "%Y-%m-%d %H:%M:%S") << std::endl;
+			log_hdl << "----------------------------------------" << std::endl;
 			return true;
 		}
 		else {
@@ -1462,6 +1507,9 @@ bool optimizeWindFarmCheck(
 
 // Cleanup function
 void cleanupWindFarm() {
+	// close log handle
+	log_hdl.close();
+
 	if (g_farmopt) {
 		delete g_farmopt;
 		g_farmopt = nullptr;
